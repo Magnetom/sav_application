@@ -1,0 +1,7 @@
+.root {
+    -fx-background-color: gold; //Цвет заднего фона окна
+}
+
+.label {
+    -fx-font-size: 12; //Высота текста
+}
