@@ -14,6 +14,9 @@ import static utils.DateTime.getHHMMFromStringTimestamp;
 
 public class Db {
 
+    private static String TAG_SQL = "SQL";
+    private static String TAG_DB  = "DB";
+
     private static Connection conn = null;
     private static Statement statement = null;
 
@@ -57,6 +60,8 @@ public class Db {
         return true;
     }
 
+    public Boolean isConnected() {return conn!=null;}
+
     // Отключиться от базы данных.
     private void disconnect(){
         if (conn != null) {
@@ -79,21 +84,29 @@ public class Db {
         disconnect();
     }
 
-    // Естановить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
-    public void setVehicleState(String vehicle, boolean blocked) throws SQLException{
-        if (vehicle == null || (vehicle.equals("")) ) return;
-        int st = (blocked)?1:0;
-        statement.executeQuery("UPDATE vehicles SET blocked='"+st+"' WHERE vehicle='"+vehicle+"';");
+    // Установить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
+    public Boolean setVehicleState(String vehicle, boolean blocked){
+        if (vehicle == null || (vehicle.equals("")) ) return false;
+        Integer st = (blocked)?1:0;
+        String query = "UPDATE vehicles SET blocked="+st+" WHERE vehicle='"+vehicle+"';";
+        try {
+            statement.executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
+            return false;
+        }
+        return true;
     }
 
     // Заблокировать ТС.
-    public void setVehicleBlocked(String vehicle) throws SQLException{
-        setVehicleState(vehicle, true);
+    public Boolean setVehicleBlocked(String vehicle) throws SQLException{
+        return setVehicleState(vehicle, true);
     }
 
     // Разблокировать ТС.
-    public void setVehicleUnblocked(String vehicle) throws SQLException{
-        setVehicleState(vehicle, false);
+    public Boolean setVehicleUnblocked(String vehicle) throws SQLException{
+        return setVehicleState(vehicle, false);
     }
 
     /* Возвращает список/лог отметок за текущий день. */
@@ -152,7 +165,16 @@ public class Db {
                 }
             }
             // Если мы попали сюда, занчит этого ТС еще нет в списке. Добавляем.
-            if (!exist) list.add( new VehicleInfo(mark.getVehicle(), 1, false, false) );
+            if (!exist) {
+                boolean isBlocked = false;
+                // Ищем ТС в списке заблокированных ТС.
+                for (String blackItem : blackList) {
+                    // Если ТС есть в списке заблокированных - делаем отметку об этом.
+                    if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
+                }
+                // Добавляем новое ТС в новый список.
+                list.add( new VehicleInfo(mark.getVehicle(), 1, isBlocked, false) );
+            }
         }
         //////////////////////////////////////////////////////////////////////////////////////
 

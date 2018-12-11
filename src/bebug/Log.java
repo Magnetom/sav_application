@@ -19,4 +19,15 @@ public final class Log {
     public static void println (String mess){
         if (logInterface != null) logInterface.println(mess);
     }
+
+    public static void printerror (String tag, String block, String mess, String extra){
+        if (logInterface != null) {
+            logInterface.println("Error in ["+tag+"]["+block+"]:");
+            logInterface.println(mess);
+            if (extra != null && !extra.isEmpty()) {
+                logInterface.println("Extra:");
+                logInterface.println(extra);
+            }
+        }
+    }
 }

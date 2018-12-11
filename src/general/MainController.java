@@ -2,6 +2,7 @@ package general;
 
 import bebug.Log;
 import bebug.LogInterface;
+import db.Db;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -19,6 +20,7 @@ import marks.Statuses;
 import marks.VehicleInfo;
 import marks.VehicleMark;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class MainController {
@@ -134,9 +136,27 @@ public class MainController {
                 Statuses newStatus  = event.getNewValue();
                 VehicleInfo vehicle = event.getTableView().getItems().get(pos.getRow());
 
-                vehicle.setBlocked(newStatus == Statuses.BLOCKED);
+                // Создаем новый экземпляр для работы с БД.
+                Db db = new Db();
+                // Подключаемся к БД на случай, если подключение не было выполнено ранее.
+                if (!db.isConnected()) db.connect();
+                // Проверяем наличие подключения еще раз.
+                if (db.isConnected()){
+                    // Применяем новый статус к ТС.
+                    boolean result = db.setVehicleState(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
 
-                /* ToDo: вызывать callback и изменять соответствующее поле в БД. */
+                    // Если SQL-запрос выполнен с ошибкой - возвращаем предыдущий статус.
+                    if (!result) {newStatus = event.getOldValue();}
+                    else
+                        Log.println("Госномер "+vehicle.getVehicle()+" был " + ((newStatus==Statuses.BLOCKED)?"заблокирован":"разблокирован")+".");
+
+                } else {
+                    // Если мы так и не смогли подключиться к БД, то возвращаем предыдущий статус.
+                    newStatus = event.getOldValue();
+                }
+
+                // Применяем новый статус к единице данных.
+                vehicle.setBlocked(newStatus == Statuses.BLOCKED);
             });
 
             /////////////////////////////////////////////////////////////////////////////
