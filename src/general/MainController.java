@@ -4,28 +4,32 @@ import bebug.Log;
 import bebug.LogInterface;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.MouseEvent;
-import javafx.util.Callback;
 import marks.Statuses;
 import marks.VehicleInfo;
 import marks.VehicleMark;
+
+import java.util.ArrayList;
 
 public class MainController {
     public TextArea logAreaId;
     public TableView marksLogId;
     public TableView statisticListId;
+
+    // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
+    private ArrayList<String> filteredVehicles;
+
+    private FilteredList<VehicleMark> filteredData;
 
     public void sayHelloWorld(ActionEvent actionEvent) {
         //helloWorld.setText("Hello world!");
@@ -34,6 +38,8 @@ public class MainController {
 
     /* Конструктор класса */
     public  MainController(){
+
+        filteredVehicles = new ArrayList<>();
 
         // Инициализируем интерфейс для вывода отладочной информации.
         Log.setInterface(new LogInterface() {
@@ -66,6 +72,12 @@ public class MainController {
             timestampColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
 
+            timestampColumn.setMinWidth(40);
+            vehicleColumn.setMinWidth(90);
+
+            timestampColumn.setStyle("-fx-alignment: CENTER;");
+            //vehicleColumn.setStyle("-fx-alignment: CENTER;");
+
             // Set Sort type for userName column
             timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
             //timestampColumn.setSortable(false);
@@ -89,9 +101,12 @@ public class MainController {
             TableColumn <VehicleInfo, Statuses> statusColumn   = new TableColumn<>("Статус");
             TableColumn <VehicleInfo, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
 
-            vehicleColumn.setMinWidth(75);
-            loopsColumn.setMinWidth(75);
+            vehicleColumn.setMinWidth(90);
+            loopsColumn.setMinWidth(125);
             statusColumn.setMinWidth(100);
+
+            loopsColumn.setStyle("-fx-alignment: CENTER;");
+            statusColumn.setStyle("-fx-alignment: CENTER;");
 
             // Defines how to fill data for each cell.
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
@@ -124,20 +139,18 @@ public class MainController {
                 /* ToDo: вызывать callback и изменять соответствующее поле в БД. */
             });
 
-
-
             /////////////////////////////////////////////////////////////////////////////
             // Делаем чекбокс "Фильтр" редактируемым и вешаем на него слушателя.
             /////////////////////////////////////////////////////////////////////////////
             filterColumn.setCellValueFactory(param -> {
 
                 final VehicleInfo info = param.getValue();
-                SimpleBooleanProperty booleanProp = new SimpleBooleanProperty(info.isBlocked());
+                SimpleBooleanProperty booleanProp = new SimpleBooleanProperty(info.isFiltered());
                 // Note: singleCol.setOnEditCommit(): Not work for CheckBoxTableCell.
                 // When "Filtered" column change.
                 booleanProp.addListener((observable, oldValue, newValue) -> {
-                    //info.setBlocked(newValue);
-                    /* ToDo: вызывать callback и изменять соответствующее поле в БД. */
+                    updateMarksLogFilter(newValue, info.getVehicle());
+                    info.setFiltered(newValue);
                 });
                 return booleanProp;
             });
@@ -148,14 +161,11 @@ public class MainController {
                 return cell;
             });
 
-
             /////////////////////////////////////////////////////////////////////////////
             // Финальные действия.
             /////////////////////////////////////////////////////////////////////////////
             // Добавляем новые колонки.
             statisticListId.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
-            // Заполняем список данными.
-            statisticListId.setItems(getVehicles());
         }
     }
 
@@ -164,21 +174,63 @@ public class MainController {
         clearGUI();
     }
 
+    // Обновить список фильтра отметок.
+    private void updateMarksLogFilter(boolean filtered, String vehicle){
+        // Обновляем список фильтрованных ТС:
+        // Добавляем ТС в список, если чекбокс отмечен.
+        if (filtered) {
+            if (!filteredVehicles.contains(vehicle)) filteredVehicles.add(vehicle);
+        }
+        else // Удаляем из списка в противном случае.
+            filteredVehicles.remove(vehicle);
+
+        refreshMarksLogFilter();
+    }
+
+    // Применить фильтр отметок с списку отметок.
+    private void refreshMarksLogFilter(){
+        // Если фильтр не пуст - применяем его, в противном случае - показываем все данные.
+        if (!filteredVehicles.isEmpty()){
+            if (filteredVehicles != null) filteredData.setPredicate(x -> filteredVehicles.contains(x.getVehicle()));
+        } else {
+            if (filteredVehicles != null) filteredData.setPredicate(x -> true);// разрешаем все данные.
+        }
+    }
+
+    // Копирует состояние всех чекбоксов "Фильтр" из старого списка в новый.
+    private void copyFilterFlagList(ObservableList<VehicleInfo> oldList, ObservableList<VehicleInfo> newList){
+        for (VehicleInfo oldInfo:oldList) {
+            if (oldInfo.isFiltered()){
+                for (VehicleInfo newInfo:newList) {
+                    if (newInfo.getVehicle().equalsIgnoreCase(oldInfo.getVehicle())) newInfo.setFiltered(true);
+                }
+            }
+        }
+    }
+
+
+    // Заполняется лог отметок.
     public void fillMarksLog(ObservableList<VehicleMark> list){
         // Заполняем список данными.
-        if (marksLogId != null) marksLogId.setItems(list);
+        if (marksLogId != null) {
+            filteredData = new FilteredList(list);
+            SortedList<VehicleMark> sortableData = new SortedList<>(filteredData);
+            marksLogId.setItems(sortableData);
+            sortableData.comparatorProperty().bind(marksLogId.comparatorProperty());
+
+            // Применить сконфигурированный ранее пользоватем фильтр лога отметок, если он не пуст.
+            refreshMarksLogFilter();
+        }
     }
 
-
-    private ObservableList<VehicleInfo> getVehicles() {
-
-        VehicleInfo info1 = new VehicleInfo("M750AM750", 5,  false, false);
-        VehicleInfo info2 = new VehicleInfo("A999VH990", 18, true,  false);
-        VehicleInfo info3 = new VehicleInfo("A999VH998", 44, false, false);
-        VehicleInfo info4 = new VehicleInfo("B897BA426", 2,  false, false);
-
-        ObservableList<VehicleInfo> list = FXCollections.observableArrayList(info1, info2, info3, info4);
-        return list;
+    // Заполняется лог статичтики.
+    public void fillStatisticList(ObservableList<VehicleInfo> list){
+        // Заполняем список данными.
+        if (statisticListId != null) {
+            // Копируем все отмеченные ранее пользователем чекбоксы "Фильтр" из предыдущего списка.
+            copyFilterFlagList( statisticListId.getItems(), list);
+            // Заполняем таблицу данными.
+            statisticListId.setItems(list);
+        }
     }
-
 }

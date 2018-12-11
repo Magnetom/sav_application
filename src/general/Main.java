@@ -13,6 +13,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import marks.VehicleInfo;
 import marks.VehicleMark;
 
 public class Main extends Application {
@@ -38,6 +39,9 @@ public class Main extends Application {
         dbInit();
         // Инициализируем сервис для периодического опроса базы данных.
         setupService();
+
+        // ТЕСТОВАЯ ФУНКЦИЯ!!!
+        //fillGUI();
     }
 
     private void dbInit() {
@@ -46,6 +50,7 @@ public class Main extends Application {
 
     void fillGUI(){
         mainController.fillMarksLog(getUserList());
+        mainController.fillStatisticList(getVehicles());
     }
 
     public static void main(String[] args) {
@@ -56,11 +61,22 @@ public class Main extends Application {
     private ObservableList<VehicleMark> getUserList() {
 
         VehicleMark mark1 = new VehicleMark("13:26","M750AM750");
-        VehicleMark mark2 = new VehicleMark("18:15","A999VH99");
-        VehicleMark mark3 = new VehicleMark("13:39","A999VH99");
-        VehicleMark mark4 = new VehicleMark("12:45","B897BA42");
+        VehicleMark mark2 = new VehicleMark("18:15","A999VH990");
+        VehicleMark mark3 = new VehicleMark("13:39","A999VH998");
+        VehicleMark mark4 = new VehicleMark("12:45","B897BA426");
 
         ObservableList<VehicleMark> list = FXCollections.observableArrayList(mark1, mark2, mark3, mark4);
+        return list;
+    }
+
+    private ObservableList<VehicleInfo> getVehicles() {
+
+        VehicleInfo info1 = new VehicleInfo("M750AM750", 5,  false, false);
+        VehicleInfo info2 = new VehicleInfo("A999VH990", 18, true,  false);
+        VehicleInfo info3 = new VehicleInfo("A999VH998", 44, false, false);
+        VehicleInfo info4 = new VehicleInfo("B897BA426", 2,  false, false);
+
+        ObservableList<VehicleInfo> list = FXCollections.observableArrayList(info1, info2, info3, info4);
         return list;
     }
 
@@ -78,9 +94,15 @@ public class Main extends Application {
                         // не изменялись со времени последней выборки из БД.
                         if ( db.isDatasetModifed() ){
                             // Получаем список всех отметок за сегодняшнюю дату.
-                            final ObservableList<VehicleMark> list = FXCollections.observableArrayList(db.getMarksRawList());
+                            final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
                             // Обновляем GUI элемент из основного потока GUI.
-                            Platform.runLater(() -> mainController.fillMarksLog( list ));
+                            Platform.runLater(() -> mainController.fillMarksLog( markList ));
+
+                            // Получаем статистику по всем ТС за сегодняшнюю дату.
+                            final ObservableList<VehicleInfo> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                            // Обновляем GUI элемент из основного потока GUI.
+                            Platform.runLater(() -> mainController.fillStatisticList( statList ));
+
                             Log.println("Список изменений в наборе данных успешно загружен.");
                         }
                         return null;
