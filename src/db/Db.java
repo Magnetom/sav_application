@@ -14,17 +14,16 @@ import static utils.DateTime.getHHMMFromStringTimestamp;
 
 public class Db {
 
-    private static String TAG_SQL = "SQL";
+    public static String TAG_SQL = "SQL";
     private static String TAG_DB  = "DB";
 
-    private static Connection conn = null;
-    private static Statement statement = null;
+    private Connection conn = null;
 
-    private static String currDataset = null;
+    private String currDataset = null;
 
     public Db(){
         // Подключаемся к БД сразу после создания экземпляра класса.
-        if (conn == null) connect();
+        connect();
      }
 
     // Подключиться к предопределенной базе данных.
@@ -44,13 +43,11 @@ public class Db {
 
             String url = "jdbc:MySQL://"+serverName+"/"+dbName;
             conn = DriverManager.getConnection (url, userName, password);
-            statement = conn.createStatement();
             Log.println("Соединение с базой данных установлено.");
         }
         catch (Exception ex)
         {
             conn = null;
-            statement = null;
             Log.println("Невозможно установить соединение с сервером бызы данных. Ошибка:");
             Log.println(ex.getLocalizedMessage());
             ex.printStackTrace();
@@ -68,7 +65,6 @@ public class Db {
             try {
                 conn.close ();
                 conn = null;
-                statement = null;
                 Log.println("Связь с базой данных разорвана.");
             }
             catch (Exception ex) {
@@ -87,10 +83,11 @@ public class Db {
     // Установить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
     public Boolean setVehicleState(String vehicle, boolean blocked){
         if (vehicle == null || (vehicle.equals("")) ) return false;
+        if(!isConnected()) return false;
         Integer st = (blocked)?1:0;
         String query = "UPDATE vehicles SET blocked="+st+" WHERE vehicle='"+vehicle+"';";
         try {
-            statement.executeUpdate(query);
+            conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
@@ -111,8 +108,8 @@ public class Db {
 
     /* Возвращает список/лог отметок за текущий день. */
     public List<VehicleMark> getMarksRawList() throws SQLException {
-
-        ResultSet rs = statement.executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
+        if(!isConnected()) return null;
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
 
         List<VehicleMark> marksList = new ArrayList<>();
         while (rs.next()) {
@@ -127,7 +124,9 @@ public class Db {
 
     // Получить список заблокированных ТС. Далее, если искомого ТС нет в списке, то считать его НЕ заблокированным.
     public List<String> getBlockedVehicles() throws  SQLException{
-        ResultSet rs = statement.executeQuery("SELECT * FROM vehicles WHERE blocked='1'");
+        if(!isConnected()) return null;
+
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM vehicles WHERE blocked='1'");
 
         List<String> blackList = new ArrayList<>();
         while (rs.next()) {
@@ -141,7 +140,7 @@ public class Db {
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
     public List<VehicleInfo> getVehiclesStatistic(@Nullable List<VehicleMark> markList) throws SQLException{
-
+        if(!isConnected()) return null;
         // Получаем (если это необходимо) лог отметок за текущий день.
         if (markList == null) markList = getMarksRawList();
 
@@ -181,10 +180,63 @@ public class Db {
         return list;
     }
 
+    /* Установить статус глобальной блокировки отметок: TRUE - все отметки заблокированы.
+     *                                                  FALSE - все отметки глобально разрешены.
+     */
+    public Boolean setGlobalBlock(Boolean block){
+        Integer val;
+        val = (block)?1:0;
+        return setSysVariable("global_blocked", val);
+    }
+
+    /* Устнавливает в БД в таблице variables значение value для переменной name. */
+    public Boolean setSysVariable(String name, Object value){
+
+        if (name == null || (name.equals("")) ) return false;
+        if(!isConnected()) return false;
+
+        String value_final;
+
+        if (value instanceof Integer) value_final = value.toString();
+        else
+            value_final = "'"+value.toString()+"'";
+
+        String query = "INSERT INTO variables (name,value) VALUES ('"+name+"',"+value_final+") ON DUPLICATE KEY UPDATE value="+value_final+";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "SET_SYS_VARIABLE",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+
+    /* Возвращает значение системной переменной из БД. */
+    public Object getSysVariable(String name){
+        if(!isConnected()) return null;
+        String query = "SELECT value FROM variables WHERE name='"+name+"';";
+        try {
+            ResultSet rs = conn.createStatement().executeQuery(query);
+
+            if (rs.next()){
+                return rs.getObject("value");
+            } else {
+                return null;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "GET_SYS_VARIABLE",e.getMessage(), query);
+            return null;
+        }
+    }
+
     /* Возвращает TRUE если текущий набор даных на сервере изменился с момента последней выборки. */
     public Boolean isDatasetModifed() throws SQLException {
-
-        ResultSet rs = statement.executeQuery("SELECT * FROM variables WHERE name='dataset';");
+        if(!isConnected()) return false;
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM variables WHERE name='dataset';");
         if (rs.next()){
             String value = rs.getString("value");
             if (currDataset == null || !currDataset.equalsIgnoreCase(value)){

@@ -10,36 +10,42 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
 import marks.Statuses;
 import marks.VehicleInfo;
 import marks.VehicleMark;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class MainController {
     public TextArea logAreaId;
     public TableView marksLogId;
     public TableView statisticListId;
+    public ToggleButton onOffButton;
+    public ImageView OnOffImage;
 
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
 
     private FilteredList<VehicleMark> filteredData;
 
-    public void sayHelloWorld(ActionEvent actionEvent) {
-        //helloWorld.setText("Hello world!");
-        //if (logAreaId != null) logAreaId.appendText("This is a text\r\n");
-    }
+    private Boolean OnState;
 
     /* Конструктор класса */
     public  MainController(){
+        OnState = false;
 
         filteredVehicles = new ArrayList<>();
 
@@ -192,6 +198,41 @@ public class MainController {
     @FXML
     public void initialize() {
         clearGUI();
+
+        setImageOff();
+
+        OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent event) {
+                boolean result = false;
+
+                OnState = !OnState;
+
+                // Создаем новый экземпляр для работы с БД.
+                Db db = new Db();
+                if (OnState){
+                    if (db.isConnected()) result = db.setGlobalBlock(false);
+                    if (result) {
+                        Log.println("Установлено глобальное РАЗРЕШЕНИЕ на выполнение отметок.");
+                        setImageOn();
+                    } else {
+                        Log.println("Не удалось осуществить глобальное разрешение на выполнение отметок из-за непредвиденной ошибки.");
+                        setImageOff();
+                    }
+                } else {
+                    if (db.isConnected()) result = db.setGlobalBlock(true);
+                    if (result) {
+                        Log.println("Установлено глобальное ЗАПРЕЩЕНИЕ на выполнение отметок!");
+                        setImageOff();
+                    } else {
+                        Log.println("Не удалось осуществить глобальное запрещение на выполнение отметок из-за непредвиденной ошибки.");
+                        setImageOn();
+                    }
+                }
+            }
+        });
+
     }
 
     // Обновить список фильтра отметок.
@@ -252,5 +293,15 @@ public class MainController {
             // Заполняем таблицу данными.
             statisticListId.setItems(list);
         }
+    }
+
+    public void setImageOff(){
+        OnOffImage.setImage(new Image("images/switch-off-48.png"));
+        OnState = false;
+    }
+
+    public void setImageOn(){
+        OnOffImage.setImage(new Image("images/switch-on-48.png"));
+        OnState = true;
     }
 }

@@ -16,6 +16,8 @@ import javafx.util.Duration;
 import marks.VehicleInfo;
 import marks.VehicleMark;
 
+import java.sql.SQLException;
+
 public class Main extends Application {
 
     private static MainController mainController;
@@ -37,47 +39,32 @@ public class Main extends Application {
 
         // Инициализируем подключение к БД.
         dbInit();
+        // Инициализация состояния основных элементов графического контроля и управления.
+        initControls();
         // Инициализируем сервис для периодического опроса базы данных.
         setupService();
+    }
 
-        // ТЕСТОВАЯ ФУНКЦИЯ!!!
-        //fillGUI();
+    private void initControls() {
+        /* Кнопка глобального Запрещения/Разрешения отметок. */
+        // Проверяется наличие системной переменной global_blocked в БД.
+        Object val = db.getSysVariable("global_blocked");
+        // Если она отсутствует, то считаем, что эта переменная включена.
+        // Если ее значение "1", то это также означает, что переменная включена.
+        if (val == null || val.toString().equals("1")){
+            mainController.setImageOff();
+        } else {
+            mainController.setImageOn();
+        }
+
     }
 
     private void dbInit() {
         db = new Db();
     }
 
-    void fillGUI(){
-        mainController.fillMarksLog(getUserList());
-        mainController.fillStatisticList(getVehicles());
-    }
-
     public static void main(String[] args) {
         launch(args);
-    }
-
-
-    private ObservableList<VehicleMark> getUserList() {
-
-        VehicleMark mark1 = new VehicleMark("13:26","M750AM750");
-        VehicleMark mark2 = new VehicleMark("18:15","A999VH990");
-        VehicleMark mark3 = new VehicleMark("13:39","A999VH998");
-        VehicleMark mark4 = new VehicleMark("12:45","B897BA426");
-
-        ObservableList<VehicleMark> list = FXCollections.observableArrayList(mark1, mark2, mark3, mark4);
-        return list;
-    }
-
-    private ObservableList<VehicleInfo> getVehicles() {
-
-        VehicleInfo info1 = new VehicleInfo("M750AM750", 5,  false, false);
-        VehicleInfo info2 = new VehicleInfo("A999VH990", 18, true,  false);
-        VehicleInfo info3 = new VehicleInfo("A999VH998", 44, false, false);
-        VehicleInfo info4 = new VehicleInfo("B897BA426", 2,  false, false);
-
-        ObservableList<VehicleInfo> list = FXCollections.observableArrayList(info1, info2, info3, info4);
-        return list;
     }
 
     // Настройка сервиса для периодических запросов в базу данных.
@@ -92,19 +79,26 @@ public class Main extends Application {
                         if (isCancelled()) {/* Do some actions. */}
                         // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
                         // не изменялись со времени последней выборки из БД.
-                        if ( db.isDatasetModifed() ){
-                            // Получаем список всех отметок за сегодняшнюю дату.
-                            final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
-                            // Обновляем GUI элемент из основного потока GUI.
-                            Platform.runLater(() -> mainController.fillMarksLog( markList ));
 
-                            // Получаем статистику по всем ТС за сегодняшнюю дату.
-                            final ObservableList<VehicleInfo> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
-                            // Обновляем GUI элемент из основного потока GUI.
-                            Platform.runLater(() -> mainController.fillStatisticList( statList ));
+                        try {
+                            if (db.isDatasetModifed()) {
+                                // Получаем список всех отметок за сегодняшнюю дату.
+                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.fillMarksLog(markList));
 
-                            Log.println("Список изменений в наборе данных успешно загружен.");
+                                // Получаем статистику по всем ТС за сегодняшнюю дату.
+                                final ObservableList<VehicleInfo> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.fillStatisticList(statList));
+
+                                Log.println("Список изменений в наборе данных успешно загружен.");
+                            }
+                        } catch (SQLException e){
+                            e.printStackTrace();
+                            Log.printerror(Db.TAG_SQL, "MAIN_THREAD",e.getMessage(), null);
                         }
+
                         return null;
                     }
 
@@ -120,6 +114,8 @@ public class Main extends Application {
 
                     @Override protected void failed() {
                         super.failed();
+                        //service.cancel();
+                        service.restart();
                         Log.println("Поток опроса базы данных завершился с ошибкой!");
                     }
                 };
