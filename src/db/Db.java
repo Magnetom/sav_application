@@ -1,7 +1,6 @@
 package db;
 
 import bebug.Log;
-import bebug.LogInterface;
 import com.sun.istack.internal.Nullable;
 import marks.VehicleInfo;
 import marks.VehicleMark;
@@ -15,13 +14,21 @@ import static utils.DateTime.getHHMMFromStringTimestamp;
 public class Db {
 
     public static String TAG_SQL = "SQL";
-    private static String TAG_DB  = "DB";
+    public static String TAG_DB  = "DB";
 
     private Connection conn = null;
 
-    private String currDataset = null;
+    private static Db instance = null;
 
-    public Db(){
+    // Хэш код текущего набора данных, загруженного в визуальные компоненты.
+    private String currDatasetHash = null;
+
+    public static Db getInstance(){
+        if (instance == null) return instance = new Db();
+        return instance;
+    }
+
+    private Db(){
         // Подключаемся к БД сразу после создания экземпляра класса.
         connect();
      }
@@ -239,8 +246,8 @@ public class Db {
         ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM variables WHERE name='dataset';");
         if (rs.next()){
             String value = rs.getString("value");
-            if (currDataset == null || !currDataset.equalsIgnoreCase(value)){
-                currDataset = value;
+            if (currDatasetHash == null || !currDatasetHash.equalsIgnoreCase(value)){
+                currDatasetHash = value;
                 return true;
             }
             return false;

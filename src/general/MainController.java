@@ -9,12 +9,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ComboBoxTableCell;
@@ -22,19 +19,25 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
-import javafx.stage.Stage;
 import marks.Statuses;
 import marks.VehicleInfo;
 import marks.VehicleMark;
 
 import java.util.ArrayList;
 
+import static utils.DateTime.*;
+
 public class MainController {
-    public TextArea logAreaId;
-    public TableView marksLogId;
-    public TableView statisticListId;
-    public ToggleButton onOffButton;
+    public TextArea  debugLogArea;
+    public TableView markLogArea;
+    public TableView vehiclesArea;
     public ImageView OnOffImage;
+
+    // Цифровые часы
+    public Label clockHour;
+    public Label clockColon;
+    public Label clockMinutes;
+    public Label clockDate;
 
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
@@ -53,12 +56,12 @@ public class MainController {
         Log.setInterface(new LogInterface() {
             @Override
             public void println(String mess) {
-                if (logAreaId != null && (mess != null) ) logAreaId.appendText(mess+"\r\n");
+                if (debugLogArea != null && (mess != null) ) debugLogArea.appendText(mess+"\r\n");
             }
 
             @Override
             public void print(String mess) {
-                if (logAreaId != null && (mess != null)) logAreaId.appendText(mess);
+                if (debugLogArea != null && (mess != null)) debugLogArea.appendText(mess);
             }
         });
     }
@@ -66,12 +69,12 @@ public class MainController {
     /* Полная очистка GUI интерфейса. */
     public void clearGUI(){
         // Очищается лог событий.
-        if (logAreaId != null) logAreaId.setText("");
+        if (debugLogArea != null) debugLogArea.setText("");
 
         // Настраивается лог отметок.
-        if (marksLogId != null) {
+        if (markLogArea != null) {
 
-            marksLogId.getColumns().clear();
+            markLogArea.getColumns().clear();
 
             TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Время");
             TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
@@ -92,17 +95,17 @@ public class MainController {
             timestampColumn.setSortable(true);
 
             // Добавляем новые колонки.
-            marksLogId.getColumns().addAll(timestampColumn, vehicleColumn);
+            markLogArea.getColumns().addAll(timestampColumn, vehicleColumn);
 
             // Заполняем список данными.
-            //marksLogId.setItems(getUserList());
+            //markLogArea.setItems(getUserList());
         }
 
         // Настраиваем список подробной статистики по каждому госномеру.
-        if (statisticListId != null){
-            statisticListId.getColumns().clear();
+        if (vehiclesArea != null){
+            vehiclesArea.getColumns().clear();
 
-            statisticListId.setEditable(true);
+            vehiclesArea.setEditable(true);
 
             TableColumn <VehicleInfo, String>   vehicleColumn  = new TableColumn<>("Госномер");
             TableColumn <VehicleInfo, Integer>  loopsColumn    = new TableColumn<>("Количество кругов");
@@ -143,7 +146,7 @@ public class MainController {
                 VehicleInfo vehicle = event.getTableView().getItems().get(pos.getRow());
 
                 // Создаем новый экземпляр для работы с БД.
-                Db db = new Db();
+                Db db = Db.getInstance();
                 // Подключаемся к БД на случай, если подключение не было выполнено ранее.
                 if (!db.isConnected()) db.connect();
                 // Проверяем наличие подключения еще раз.
@@ -191,12 +194,14 @@ public class MainController {
             // Финальные действия.
             /////////////////////////////////////////////////////////////////////////////
             // Добавляем новые колонки.
-            statisticListId.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
+            vehiclesArea.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
         }
     }
 
     @FXML
     public void initialize() {
+        refreshClocks();
+
         clearGUI();
 
         setImageOff();
@@ -210,7 +215,7 @@ public class MainController {
                 OnState = !OnState;
 
                 // Создаем новый экземпляр для работы с БД.
-                Db db = new Db();
+                Db db = Db.getInstance();
                 if (OnState){
                     if (db.isConnected()) result = db.setGlobalBlock(false);
                     if (result) {
@@ -273,35 +278,51 @@ public class MainController {
     // Заполняется лог отметок.
     public void fillMarksLog(ObservableList<VehicleMark> list){
         // Заполняем список данными.
-        if (marksLogId != null) {
+        if (markLogArea != null) {
             filteredData = new FilteredList(list);
             SortedList<VehicleMark> sortableData = new SortedList<>(filteredData);
-            marksLogId.setItems(sortableData);
-            sortableData.comparatorProperty().bind(marksLogId.comparatorProperty());
+            markLogArea.setItems(sortableData);
+            sortableData.comparatorProperty().bind(markLogArea.comparatorProperty());
 
             // Применить сконфигурированный ранее пользоватем фильтр лога отметок, если он не пуст.
             refreshMarksLogFilter();
         }
     }
 
-    // Заполняется лог статичтики.
+    // Заполняется лог статиcтики.
     public void fillStatisticList(ObservableList<VehicleInfo> list){
         // Заполняем список данными.
-        if (statisticListId != null) {
+        if (vehiclesArea != null) {
             // Копируем все отмеченные ранее пользователем чекбоксы "Фильтр" из предыдущего списка.
-            copyFilterFlagList( statisticListId.getItems(), list);
+            copyFilterFlagList( vehiclesArea.getItems(), list);
             // Заполняем таблицу данными.
-            statisticListId.setItems(list);
+            vehiclesArea.setItems(list);
         }
     }
 
     public void setImageOff(){
-        OnOffImage.setImage(new Image("images/switch-off-48.png"));
+        OnOffImage.setImage(new Image("images/switch-off-gray-48.png"));
         OnState = false;
     }
 
     public void setImageOn(){
-        OnOffImage.setImage(new Image("images/switch-on-48.png"));
+        OnOffImage.setImage(new Image("images/switch-on-green-48.png"));
         OnState = true;
+    }
+
+    static boolean oddTick = false;
+    public void refreshClocks(){
+
+        clockHour.setText(getTimeKK());   // Устанавливаем часы.
+        clockMinutes.setText(getTimeMM());// Устанавливаем минуты.
+
+        clockDate.setText(getTimeDDMMYYYY()); // Устанавливаем текущую дату.
+
+        // Манипулируем знаком "двоеточее".
+        if (oddTick) clockColon.setStyle("-fx-text-fill: #646464; -fx-font-size: 20.0");
+        else
+            clockColon.setStyle("-fx-text-fill: #a8a8a8; -fx-font-size: 20.0");
+
+        oddTick = !oddTick;
     }
 }

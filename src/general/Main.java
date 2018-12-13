@@ -21,8 +21,11 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     private static MainController mainController;
-    private Db db;
-    private ScheduledService service;
+
+    private Db db; // Класс для доступа к БД.
+    private ScheduledService dbPollService; // Сервис опроса БД.
+    private ScheduledService clockService; // Сервис-часы реального времени.
+
 
     @Override
     public void start(Stage primaryStage) throws Exception{
@@ -60,7 +63,7 @@ public class Main extends Application {
     }
 
     private void dbInit() {
-        db = new Db();
+        db = Db.getInstance();
     }
 
     public static void main(String[] args) {
@@ -70,7 +73,26 @@ public class Main extends Application {
     // Настройка сервиса для периодических запросов в базу данных.
     private void setupService(){
 
-        service  = new ScheduledService() {
+        /* Сервис для отображения часов реального времени. */
+        clockService = new ScheduledService() {
+            @Override
+            protected Task createTask() {
+                return new Task() {
+                    @Override
+                    protected Object call() throws Exception {
+                        Platform.runLater(() -> mainController.refreshClocks());
+                        return null;
+                    }
+                };
+            }
+        };
+        clockService.setPeriod(new Duration(1000)); // Период повторения.
+        clockService.start();
+
+        //**********************************************************************************************************/
+        /* Основной сервис. Делает периодические опросы БД. Инициирует вывод полученных данных в визуальные формы. */
+        //**********************************************************************************************************/
+        dbPollService = new ScheduledService() {
             @Override
             protected Task createTask() {
                 return new Task<Void>() {
@@ -114,15 +136,15 @@ public class Main extends Application {
 
                     @Override protected void failed() {
                         super.failed();
-                        //service.cancel();
-                        service.restart();
+                        //dbPollService.cancel();
+                        dbPollService.restart();
                         Log.println("Поток опроса базы данных завершился с ошибкой!");
                     }
                 };
             }
         };
-        //service.setDelay(new Duration(500));  // Задержка перед стартом.
-        service.setPeriod(new Duration(1000)); // Период повторения.
-        service.start();
+        //dbPollService.setDelay(new Duration(500));  // Задержка перед стартом.
+        dbPollService.setPeriod(new Duration(1000)); // Период повторения.
+        dbPollService.start();
     }
 }

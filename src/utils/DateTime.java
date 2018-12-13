@@ -10,11 +10,16 @@ public class DateTime {
     public static long ONE_HOUR   = 60L*ONE_MINUTE;
     public static long ONE_DAY    = 24L*ONE_HOUR;
 
-    private final static String MMSS_TIME_FORMAT     = "mm:ss";
-    private final static String KKMM_TIME_FORMAT     = "kk:mm";
-    private final static String DDMMYYYY_DATA_FORMAT = "dd-MM-yyyy";
-    private final static String YYYYMMDD_DATA_FORMAT = "yyyy-MM-dd";
-    private final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
+    public final static String MMSS_TIME_FORMAT     = "mm:ss";
+    public final static String KKMM_TIME_FORMAT     = "kk:mm";
+    public final static String KKMM_SPACE_TIME_FORMAT = "kk mm";
+
+    public final static String KK_TIME_FORMAT     = "kk";
+    public final static String MM_TIME_FORMAT     = "mm";
+
+    public final static String DDMMYYYY_DATA_FORMAT = "dd-MM-yyyy";
+    public final static String YYYYMMDD_DATA_FORMAT = "yyyy-MM-dd";
+    public final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
 
 
     private static String getFormattedDataTime(long timestamp, final String format){
@@ -36,6 +41,25 @@ public class DateTime {
         String tmp = getTimeFromStringTimestamp(strTimestamp);
         String[] a = tmp.toString().split(":");
         return a[0]+":"+a[1];
+    }
+
+    public static String getTimeDDMMYYYY(){
+        return getFormattedDataTime(System.currentTimeMillis(), DDMMYYYY_DATA_FORMAT);
+    }
+    public static String getTimeKK(){
+        return getFormattedDataTime(System.currentTimeMillis(), KK_TIME_FORMAT);
+    }
+    public static String getTimeMM(){
+        return getFormattedDataTime(System.currentTimeMillis(), MM_TIME_FORMAT);
+    }
+    public static String getTimeKKMM(long timestamp){
+        return getFormattedDataTime(timestamp, KKMM_TIME_FORMAT);
+    }
+    public static String getTimeKKMM(){
+        return getFormattedDataTime(System.currentTimeMillis(), KKMM_TIME_FORMAT);
+    }
+    public static String getTimeKKMM(String format){
+        return getFormattedDataTime(System.currentTimeMillis(), format);
     }
 
 }
