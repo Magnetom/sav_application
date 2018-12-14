@@ -1,6 +1,8 @@
 package general;
 
 import bebug.Log;
+import broadcast.Broadcast;
+import broadcast.SettingsChanged;
 import db.Db;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -11,6 +13,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import marks.VehicleInfo;
@@ -36,6 +39,7 @@ public class Main extends Application {
         Parent root = loader.load();
         mainController = loader.getController();
 
+        primaryStage.getIcons().add(new Image("images/favicon.png"));
         primaryStage.setTitle("SAV - the System of Accounting of Vehicles");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
@@ -46,9 +50,21 @@ public class Main extends Application {
         initControls();
         // Инициализируем сервис для периодического опроса базы данных.
         setupService();
+        // Инициализируем слушатаелей сообщений от различных модулей.
+        setupBroadcastListeners();
+    }
+
+    private void setupBroadcastListeners() {
+
+        // Были произведены изменения в настройках БД.
+        Broadcast.setSettingsChangedInterface(() -> {
+            // Загружаем все настройки с сервера БД и визуализируем их заново.
+            initControls();
+        });
     }
 
     private void initControls() {
+
         /* Кнопка глобального Запрещения/Разрешения отметок. */
         // Проверяется наличие системной переменной global_blocked в БД.
         Object val = db.getSysVariable("global_blocked");
@@ -60,6 +76,13 @@ public class Main extends Application {
             mainController.setImageOn();
         }
 
+        /* Отображение текущего интервала между отметками. */
+        val = db.getSysVariable("mark_delay");
+        if (val == null || val.toString().equals("0")){
+            mainController.setMarkDelayView("15*");
+        } else {
+            mainController.setMarkDelayView(val.toString());
+        }
     }
 
     private void dbInit() {

@@ -3,12 +3,17 @@ package general;
 import bebug.Log;
 import bebug.LogInterface;
 import db.Db;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import utils.hash;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -19,13 +24,17 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
 import marks.Statuses;
 import marks.VehicleInfo;
 import marks.VehicleMark;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import static utils.DateTime.*;
+import static utils.hash.*;
 
 public class MainController {
     public TextArea  debugLogArea;
@@ -38,6 +47,9 @@ public class MainController {
     public Label clockColon;
     public Label clockMinutes;
     public Label clockDate;
+
+    // Отображение текущей настройки времянного интервала.
+    public Label markDelay;
 
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
@@ -324,5 +336,59 @@ public class MainController {
             clockColon.setStyle("-fx-text-fill: #a8a8a8; -fx-font-size: 20.0");
 
         oddTick = !oddTick;
+    }
+
+    public void setMarkDelayView(String value){
+        markDelay.setText(value);
+    }
+
+    public void onSetupAction (ActionEvent event){
+
+        // Настраиваем поле для ввода пароля.
+        final PasswordField passwordPasswordField = new PasswordField();
+        GridPane grid = new GridPane();
+        grid.add(passwordPasswordField, 0, 0);
+        grid.setStyle("-fx-alignment: center");
+        passwordPasswordField.setFocusTraversable(true);
+
+        // Настраиваем диалоговое окно.
+        Dialog<String> dialog = new Dialog<>();
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK,  ButtonType.CLOSE);
+
+        // Вешаем слушателя на кнопку ОК.
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setOnAction(event1 -> {
+            // Сравниваем хэш-суммы паролей.
+            String str = MD5(passwordPasswordField.getText());
+            // Если верный пароль, даем доступ к меню настроек.
+            if ( str.equalsIgnoreCase("eb0a191797624dd3a48fa681d3061212")){
+                // ToDo: открыть окно настроек
+                /////////////////////////////////////////////////////////////////////////
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("settings.fxml"));
+                Parent root = null;
+                try {
+                    root = loader.load();
+                    //SettingsController settingsController = loader.getController();
+                    Stage stage = new Stage();
+                    stage.getIcons().add(new Image("/images/services-32.png"));
+                    stage.setTitle("Настройки сервера базы данных");
+                    stage.setScene(new Scene(root, -1, -1));
+                    stage.show();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                /////////////////////////////////////////////////////////////////////////
+            }
+        });
+
+        // Стилизируем все и объединяем.
+        dialog.getDialogPane().setStyle("-fx-min-width: 210; -fx-max-width: 210;");
+        dialog.setTitle("Введите пароль доступа");
+        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();// Get the Stage.
+        stage.getIcons().add(new Image(this.getClass().getResource("/images/key-32.png").toString()));// Add a custom icon.
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.showAndWait();
     }
 }
