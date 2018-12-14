@@ -2,7 +2,7 @@ package db;
 
 import bebug.Log;
 import com.sun.istack.internal.Nullable;
-import marks.VehicleInfo;
+import marks.VehicleItem;
 import marks.VehicleMark;
 
 import java.sql.*;
@@ -113,7 +113,7 @@ public class Db {
         return setVehicleState(vehicle, false);
     }
 
-    /* Возвращает список/лог отметок за текущий день. */
+    // Возвращает список/лог отметок за текущий день.
     public List<VehicleMark> getMarksRawList() throws SQLException {
         if(!isConnected()) return null;
         ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
@@ -128,6 +128,25 @@ public class Db {
         }
         return marksList;
     }
+
+    // Получить полный список всех зарегистрированных ТС.
+    public List<VehicleItem> getAllVehicles() throws  SQLException{
+        if(!isConnected()) return null;
+
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM vehicles");
+
+        List<VehicleItem> vehiclesList = new ArrayList<>();
+        while (rs.next()) {
+            vehiclesList.add(new VehicleItem(
+                    rs.getString("vehicle"),
+                    0,
+                    rs.getBoolean("blocked"),
+                    rs.getInt("popularity"),
+                    false));
+        }
+        return vehiclesList;
+    }
+
 
     // Получить список заблокированных ТС. Далее, если искомого ТС нет в списке, то считать его НЕ заблокированным.
     public List<String> getBlockedVehicles() throws  SQLException{
@@ -146,7 +165,7 @@ public class Db {
     // Получить статистику по каждому ТС: [госномер]-[количество кругов]-[статус блокировки].
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
-    public List<VehicleInfo> getVehiclesStatistic(@Nullable List<VehicleMark> markList) throws SQLException{
+    public List<VehicleItem> getVehiclesStatistic(@Nullable List<VehicleMark> markList) throws SQLException{
         if(!isConnected()) return null;
         // Получаем (если это необходимо) лог отметок за текущий день.
         if (markList == null) markList = getMarksRawList();
@@ -155,14 +174,14 @@ public class Db {
         List<String> blackList = getBlockedVehicles();
 
         // Создаем экземпляр класса списка статистики.
-        List<VehicleInfo> list = new ArrayList<>();
+        List<VehicleItem> list = new ArrayList<>();
 
         //////////////////////////////////////////////////////////////////////////////////////
         boolean exist;
 
         for (VehicleMark mark: markList) {
             exist = false;
-            for (VehicleInfo item: list) {
+            for (VehicleItem item: list) {
                 // если ТС уже есть в итоговом списке, увеличиваем счетчик кругов и переходим к следующей итерации.
                 if (item.getVehicle().equalsIgnoreCase(mark.getVehicle())){
                     item.setLoopsCnt(item.getLoopsCnt()+1);
@@ -179,7 +198,7 @@ public class Db {
                     if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
                 }
                 // Добавляем новое ТС в новый список.
-                list.add( new VehicleInfo(mark.getVehicle(), 1, isBlocked, false) );
+                list.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, 0,false) );
             }
         }
         //////////////////////////////////////////////////////////////////////////////////////

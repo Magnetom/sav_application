@@ -2,11 +2,11 @@ package general;
 
 import bebug.Log;
 import bebug.LogInterface;
+import broadcast.Broadcast;
 import db.Db;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import utils.hash;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -14,7 +14,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -27,7 +26,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import marks.Statuses;
-import marks.VehicleInfo;
+import marks.VehicleItem;
 import marks.VehicleMark;
 
 import java.io.IOException;
@@ -38,8 +37,9 @@ import static utils.hash.*;
 
 public class MainController {
     public TextArea  debugLogArea;
-    public TableView markLogArea;
-    public TableView vehiclesArea;
+    public TableView todayVehiclesMarksLog;
+    public TableView todayVehiclesStatistic;
+    public TableView allDbVehiclesList;
     public ImageView OnOffImage;
 
     // Цифровые часы
@@ -50,6 +50,7 @@ public class MainController {
 
     // Отображение текущей настройки времянного интервала.
     public Label markDelay;
+
 
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
@@ -78,15 +79,16 @@ public class MainController {
         });
     }
 
-    /* Полная очистка GUI интерфейса. */
-    public void clearGUI(){
+    /* Полная очистка GUI интерфейса и реинициализация. */
+    public void initAllGUIs(){
+
         // Очищается лог событий.
         if (debugLogArea != null) debugLogArea.setText("");
 
         // Настраивается лог отметок.
-        if (markLogArea != null) {
+        if (todayVehiclesMarksLog != null) {
 
-            markLogArea.getColumns().clear();
+            todayVehiclesMarksLog.getColumns().clear();
 
             TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Время");
             TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
@@ -103,26 +105,22 @@ public class MainController {
 
             // Set Sort type for userName column
             timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
-            //timestampColumn.setSortable(false);
             timestampColumn.setSortable(true);
 
             // Добавляем новые колонки.
-            markLogArea.getColumns().addAll(timestampColumn, vehicleColumn);
-
-            // Заполняем список данными.
-            //markLogArea.setItems(getUserList());
+            todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn);
         }
 
         // Настраиваем список подробной статистики по каждому госномеру.
-        if (vehiclesArea != null){
-            vehiclesArea.getColumns().clear();
+        if (todayVehiclesStatistic != null){
+            todayVehiclesStatistic.getColumns().clear();
 
-            vehiclesArea.setEditable(true);
+            todayVehiclesStatistic.setEditable(true);
 
-            TableColumn <VehicleInfo, String>   vehicleColumn  = new TableColumn<>("Госномер");
-            TableColumn <VehicleInfo, Integer>  loopsColumn    = new TableColumn<>("Количество кругов");
-            TableColumn <VehicleInfo, Statuses> statusColumn   = new TableColumn<>("Статус");
-            TableColumn <VehicleInfo, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
+            TableColumn <VehicleItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
+            TableColumn <VehicleItem, Integer>  loopsColumn    = new TableColumn<>("Кругов");
+            TableColumn <VehicleItem, Statuses> statusColumn   = new TableColumn<>("Статус");
+            TableColumn <VehicleItem, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
 
             vehicleColumn.setMinWidth(90);
             loopsColumn.setMinWidth(125);
@@ -135,57 +133,21 @@ public class MainController {
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
             loopsColumn.setCellValueFactory(new PropertyValueFactory<>("loopsCnt"));
 
-            // Set Sort type for userName column
+            // Set Sort type
             loopsColumn.setSortType(TableColumn.SortType.DESCENDING);
             loopsColumn.setSortable(true);
 
             /////////////////////////////////////////////////////////////////////////////
             // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
             /////////////////////////////////////////////////////////////////////////////
-            ObservableList<Statuses> statusList = FXCollections.observableArrayList(Statuses.values());
-
-            statusColumn.setCellValueFactory(param -> {
-                VehicleInfo vehicle = param.getValue();
-                return new SimpleObjectProperty<>( vehicle.isBlocked() ? Statuses.BLOCKED : Statuses.NORMAL );
-            });
-
-            statusColumn.setCellFactory(ComboBoxTableCell.forTableColumn(statusList));
-
-            statusColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleInfo, Statuses> event) -> {
-                TablePosition<VehicleInfo, Statuses> pos = event.getTablePosition();
-
-                Statuses newStatus  = event.getNewValue();
-                VehicleInfo vehicle = event.getTableView().getItems().get(pos.getRow());
-
-                // Создаем новый экземпляр для работы с БД.
-                Db db = Db.getInstance();
-                // Подключаемся к БД на случай, если подключение не было выполнено ранее.
-                if (!db.isConnected()) db.connect();
-                // Проверяем наличие подключения еще раз.
-                if (db.isConnected()){
-                    // Применяем новый статус к ТС.
-                    boolean result = db.setVehicleState(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
-
-                    // Если SQL-запрос выполнен с ошибкой - возвращаем предыдущий статус.
-                    if (!result) {newStatus = event.getOldValue();}
-                    else
-                        Log.println("Госномер "+vehicle.getVehicle()+" был " + ((newStatus==Statuses.BLOCKED)?"заблокирован":"разблокирован")+".");
-
-                } else {
-                    // Если мы так и не смогли подключиться к БД, то возвращаем предыдущий статус.
-                    newStatus = event.getOldValue();
-                }
-
-                // Применяем новый статус к единице данных.
-                vehicle.setBlocked(newStatus == Statuses.BLOCKED);
-            });
+            setupStatusComboBox(statusColumn);
 
             /////////////////////////////////////////////////////////////////////////////
             // Делаем чекбокс "Фильтр" редактируемым и вешаем на него слушателя.
             /////////////////////////////////////////////////////////////////////////////
             filterColumn.setCellValueFactory(param -> {
 
-                final VehicleInfo info = param.getValue();
+                final VehicleItem info = param.getValue();
                 SimpleBooleanProperty booleanProp = new SimpleBooleanProperty(info.isFiltered());
                 // Note: singleCol.setOnEditCommit(): Not work for CheckBoxTableCell.
                 // When "Filtered" column change.
@@ -197,59 +159,131 @@ public class MainController {
             });
 
             filterColumn.setCellFactory(p -> {
-                CheckBoxTableCell<VehicleInfo, Boolean> cell = new CheckBoxTableCell<>();
+                CheckBoxTableCell<VehicleItem, Boolean> cell = new CheckBoxTableCell<>();
                 cell.setAlignment(Pos.CENTER);
                 return cell;
             });
 
-            /////////////////////////////////////////////////////////////////////////////
-            // Финальные действия.
-            /////////////////////////////////////////////////////////////////////////////
             // Добавляем новые колонки.
-            vehiclesArea.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
+            todayVehiclesStatistic.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
         }
+
+        // Настраиваем отображение списока всех госномеров.
+        if (allDbVehiclesList != null){
+            allDbVehiclesList.getColumns().clear();
+            allDbVehiclesList.setEditable(true);
+
+            TableColumn <VehicleItem, String>   vehicleColumn    = new TableColumn<>("Госномер");
+            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Рейтинг");
+            TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус");
+
+            vehicleColumn.setMinWidth(90);
+            statusColumn.setMinWidth(90);
+            popularityColumn.setMinWidth(30);
+
+            popularityColumn.setStyle("-fx-alignment: CENTER;");
+            statusColumn.setStyle("-fx-alignment: CENTER;");
+
+            // Defines how to fill data for each cell.
+            vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
+            popularityColumn.setCellValueFactory(new PropertyValueFactory<>("popularity"));
+
+            // Set Sort type
+            popularityColumn.setSortType(TableColumn.SortType.DESCENDING);
+            popularityColumn.setSortable(true);
+
+            /////////////////////////////////////////////////////////////////////////////
+            // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
+            /////////////////////////////////////////////////////////////////////////////
+            setupStatusComboBox(statusColumn);
+
+
+            // Добавляем новые колонки.
+            allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn);
+        }
+    }
+
+    private void setupStatusComboBox(TableColumn <VehicleItem, Statuses> column){
+        /////////////////////////////////////////////////////////////////////////////
+        // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
+        /////////////////////////////////////////////////////////////////////////////
+        ObservableList<Statuses> statusList = FXCollections.observableArrayList(Statuses.values());
+
+        column.setCellValueFactory(param -> {
+            VehicleItem vehicle = param.getValue();
+            return new SimpleObjectProperty<>( vehicle.isBlocked() ? Statuses.BLOCKED : Statuses.NORMAL );
+        });
+
+        column.setCellFactory(ComboBoxTableCell.forTableColumn(statusList));
+
+        column.setOnEditCommit((TableColumn.CellEditEvent<VehicleItem, Statuses> event) -> {
+            TablePosition<VehicleItem, Statuses> pos = event.getTablePosition();
+
+            Statuses newStatus  = event.getNewValue();
+            VehicleItem vehicle = event.getTableView().getItems().get(pos.getRow());
+
+            // Создаем новый экземпляр для работы с БД.
+            Db db = Db.getInstance();
+            // Подключаемся к БД на случай, если подключение не было выполнено ранее.
+            if (!db.isConnected()) db.connect();
+            // Проверяем наличие подключения еще раз.
+            if (db.isConnected()){
+                // Применяем новый статус к ТС.
+                boolean result = db.setVehicleState(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
+
+                // Если SQL-запрос выполнен с ошибкой - возвращаем предыдущий статус.
+                if (!result) {newStatus = event.getOldValue();}
+                else
+                    Log.println("Госномер "+vehicle.getVehicle()+" был " + ((newStatus==Statuses.BLOCKED)?"заблокирован":"разблокирован")+".");
+
+            } else {
+                // Если мы так и не смогли подключиться к БД, то возвращаем предыдущий статус.
+                newStatus = event.getOldValue();
+            }
+
+            // Применяем новый статус к единице данных.
+            vehicle.setBlocked(newStatus == Statuses.BLOCKED);
+
+            // Сообщаем верхнему уровню об изменении набора данных.
+            Broadcast.getDatasetInterface().wasChanged();
+        });
     }
 
     @FXML
     public void initialize() {
         refreshClocks();
 
-        clearGUI();
+        initAllGUIs();
 
         setImageOff();
 
-        OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+        OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            boolean result = false;
 
-            @Override
-            public void handle(MouseEvent event) {
-                boolean result = false;
+            OnState = !OnState;
 
-                OnState = !OnState;
-
-                // Создаем новый экземпляр для работы с БД.
-                Db db = Db.getInstance();
-                if (OnState){
-                    if (db.isConnected()) result = db.setGlobalBlock(false);
-                    if (result) {
-                        Log.println("Установлено глобальное РАЗРЕШЕНИЕ на выполнение отметок.");
-                        setImageOn();
-                    } else {
-                        Log.println("Не удалось осуществить глобальное разрешение на выполнение отметок из-за непредвиденной ошибки.");
-                        setImageOff();
-                    }
+            // Создаем новый экземпляр для работы с БД.
+            Db db = Db.getInstance();
+            if (OnState){
+                if (db.isConnected()) result = db.setGlobalBlock(false);
+                if (result) {
+                    Log.println("Установлено глобальное РАЗРЕШЕНИЕ на выполнение отметок.");
+                    setImageOn();
                 } else {
-                    if (db.isConnected()) result = db.setGlobalBlock(true);
-                    if (result) {
-                        Log.println("Установлено глобальное ЗАПРЕЩЕНИЕ на выполнение отметок!");
-                        setImageOff();
-                    } else {
-                        Log.println("Не удалось осуществить глобальное запрещение на выполнение отметок из-за непредвиденной ошибки.");
-                        setImageOn();
-                    }
+                    Log.println("Не удалось осуществить глобальное разрешение на выполнение отметок из-за непредвиденной ошибки.");
+                    setImageOff();
+                }
+            } else {
+                if (db.isConnected()) result = db.setGlobalBlock(true);
+                if (result) {
+                    Log.println("Установлено глобальное ЗАПРЕЩЕНИЕ на выполнение отметок!");
+                    setImageOff();
+                } else {
+                    Log.println("Не удалось осуществить глобальное запрещение на выполнение отметок из-за непредвиденной ошибки.");
+                    setImageOn();
                 }
             }
         });
-
     }
 
     // Обновить список фильтра отметок.
@@ -276,10 +310,10 @@ public class MainController {
     }
 
     // Копирует состояние всех чекбоксов "Фильтр" из старого списка в новый.
-    private void copyFilterFlagList(ObservableList<VehicleInfo> oldList, ObservableList<VehicleInfo> newList){
-        for (VehicleInfo oldInfo:oldList) {
+    private void copyFilterFlagList(ObservableList<VehicleItem> oldList, ObservableList<VehicleItem> newList){
+        for (VehicleItem oldInfo:oldList) {
             if (oldInfo.isFiltered()){
-                for (VehicleInfo newInfo:newList) {
+                for (VehicleItem newInfo:newList) {
                     if (newInfo.getVehicle().equalsIgnoreCase(oldInfo.getVehicle())) newInfo.setFiltered(true);
                 }
             }
@@ -288,13 +322,13 @@ public class MainController {
 
 
     // Заполняется лог отметок.
-    public void fillMarksLog(ObservableList<VehicleMark> list){
+    public void printMarksLog(ObservableList<VehicleMark> list){
         // Заполняем список данными.
-        if (markLogArea != null) {
+        if (todayVehiclesMarksLog != null) {
             filteredData = new FilteredList(list);
             SortedList<VehicleMark> sortableData = new SortedList<>(filteredData);
-            markLogArea.setItems(sortableData);
-            sortableData.comparatorProperty().bind(markLogArea.comparatorProperty());
+            todayVehiclesMarksLog.setItems(sortableData);
+            sortableData.comparatorProperty().bind(todayVehiclesMarksLog.comparatorProperty());
 
             // Применить сконфигурированный ранее пользоватем фильтр лога отметок, если он не пуст.
             refreshMarksLogFilter();
@@ -302,13 +336,13 @@ public class MainController {
     }
 
     // Заполняется лог статиcтики.
-    public void fillStatisticList(ObservableList<VehicleInfo> list){
+    public void printStatisticList(ObservableList<VehicleItem> list){
         // Заполняем список данными.
-        if (vehiclesArea != null) {
+        if (todayVehiclesStatistic != null) {
             // Копируем все отмеченные ранее пользователем чекбоксы "Фильтр" из предыдущего списка.
-            copyFilterFlagList( vehiclesArea.getItems(), list);
+            copyFilterFlagList( todayVehiclesStatistic.getItems(), list);
             // Заполняем таблицу данными.
-            vehiclesArea.setItems(list);
+            todayVehiclesStatistic.setItems(list);
         }
     }
 
@@ -390,5 +424,12 @@ public class MainController {
         dialog.getDialogPane().setContent(grid);
 
         dialog.showAndWait();
+    }
+
+    public void printAllVehicles(ObservableList<VehicleItem> list){
+        if (allDbVehiclesList != null){
+            // Заполняем таблицу данными.
+            allDbVehiclesList.setItems(list);
+        }
     }
 }

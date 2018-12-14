@@ -2,7 +2,6 @@ package general;
 
 import bebug.Log;
 import broadcast.Broadcast;
-import broadcast.SettingsChanged;
 import db.Db;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -16,7 +15,7 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import marks.VehicleInfo;
+import marks.VehicleItem;
 import marks.VehicleMark;
 
 import java.sql.SQLException;
@@ -29,18 +28,21 @@ public class Main extends Application {
     private ScheduledService dbPollService; // Сервис опроса БД.
     private ScheduledService clockService; // Сервис-часы реального времени.
 
+    private Boolean manualSampleTrigger;
+
 
     @Override
     public void start(Stage primaryStage) throws Exception{
 
         // Инициализируем графику.
-        //Parent root = FXMLLoader.load(getClass().getResource("sample.fxml"));
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("sample.fxml"));
+        //Parent root = FXMLLoader.load(getClass().getResource("main.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
         Parent root = loader.load();
         mainController = loader.getController();
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
-        primaryStage.setTitle("SAV - the System of Accounting of Vehicles");
+        //primaryStage.setTitle("SAV v1.0 - the System of Accounting of Vehicles");
+        primaryStage.setTitle("SAV v1.0 - система учета ходок автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
 
@@ -60,6 +62,13 @@ public class Main extends Application {
         Broadcast.setSettingsChangedInterface(() -> {
             // Загружаем все настройки с сервера БД и визуализируем их заново.
             initControls();
+            Log.println("Набор переменных на сервере изменен вручную.");
+        });
+
+        // Набор данных на сервере был изменен вручную каким-либо компонентом системы.
+        Broadcast.setDatasetInterface(() -> {
+            manualSampleTrigger = true;
+            Log.println("Набор данных на сервере изменен вручную.");
         });
     }
 
@@ -83,6 +92,8 @@ public class Main extends Application {
         } else {
             mainController.setMarkDelayView(val.toString());
         }
+
+        Log.println("Набор переменных был загружен с сервера.");
     }
 
     private void dbInit() {
@@ -93,10 +104,12 @@ public class Main extends Application {
         launch(args);
     }
 
-    // Настройка сервиса для периодических запросов в базу данных.
+    // Настройка сервисов.
     private void setupService(){
 
+        //**************************************************/
         /* Сервис для отображения часов реального времени. */
+        //**************************************************/
         clockService = new ScheduledService() {
             @Override
             protected Task createTask() {
@@ -126,16 +139,23 @@ public class Main extends Application {
                         // не изменялись со времени последней выборки из БД.
 
                         try {
-                            if (db.isDatasetModifed()) {
+                            if (db.isDatasetModifed() || manualSampleTrigger) {
+                                manualSampleTrigger = false;
+
                                 // Получаем список всех отметок за сегодняшнюю дату.
                                 final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
                                 // Обновляем GUI элемент из основного потока GUI.
-                                Platform.runLater(() -> mainController.fillMarksLog(markList));
+                                Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleInfo> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
                                 // Обновляем GUI элемент из основного потока GUI.
-                                Platform.runLater(() -> mainController.fillStatisticList(statList));
+                                Platform.runLater(() -> mainController.printStatisticList(statList));
+
+                                // Получаем список всех зарегистрированных ТС.
+                                final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
 
                                 Log.println("Список изменений в наборе данных успешно загружен.");
                             }

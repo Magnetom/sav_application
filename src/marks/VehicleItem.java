@@ -1,12 +1,14 @@
 package marks;
 
-public class VehicleInfo {
+public class VehicleItem {
+
     private String  vehicle;
     private Integer loopsCnt;
+    private Integer popularity;
     private Boolean blocked;
     private Boolean filtered;
 
-    public VehicleInfo(String vehicle, Integer loops, Boolean blocked, Boolean filtered){ this.vehicle = vehicle; loopsCnt = loops; this.blocked = blocked; this.filtered = filtered;}
+    public VehicleItem(String vehicle, Integer loops, Boolean blocked, Integer popularity, Boolean filtered){ this.popularity = popularity; this.vehicle = vehicle; loopsCnt = loops; this.blocked = blocked; this.filtered = filtered;}
 
     public void setFiltered(Boolean filtered) {this.filtered = filtered; }
 
@@ -24,9 +26,7 @@ public class VehicleInfo {
         this.blocked = blocked;
     }
 
-    public String getVehicle() {
-        return vehicle;
-    }
+    public String getVehicle() {return vehicle;}
 
     public Integer getLoopsCnt() {
         return loopsCnt;
@@ -35,4 +35,7 @@ public class VehicleInfo {
     public Boolean isBlocked() {
         return blocked;
     }
+
+    public Integer getPopularity() {return popularity; }
+    public void setPopularity(Integer popularity) { this.popularity = popularity; }
 }

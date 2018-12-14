@@ -17,11 +17,11 @@
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="200.0" minWidth="300.0" prefHeight="400.0" prefWidth="600.0" stylesheets="/general/sample.css" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="general.MainController">
    <center>
-      <SplitPane dividerPositions="0.6839464882943144" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+      <SplitPane dividerPositions="0.7, 1.0" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                <children>
-                  <TableView fx:id="vehiclesArea" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <TableView fx:id="todayVehiclesStatistic" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <columns>
                       <TableColumn prefWidth="97.0" text="Госномер" />
                       <TableColumn prefWidth="131.0" text="Количество кругов" />
@@ -30,7 +30,7 @@
                </children></AnchorPane>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="75.0">
                <children>
-                  <TableView fx:id="markLogArea" layoutX="-21.0" prefHeight="333.0" prefWidth="186.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <TableView fx:id="todayVehiclesMarksLog" layoutX="-21.0" prefHeight="333.0" prefWidth="186.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <columns>
                       <TableColumn prefWidth="51.0" text="Время" />
                       <TableColumn prefWidth="99.0" text="Госномер" />
@@ -38,6 +38,15 @@
                   </TableView>
                </children>
             </AnchorPane>
+            <AnchorPane minWidth="0.0">
+               <children>
+                  <TableView fx:id="allDbVehiclesList" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <columns>
+                      <TableColumn prefWidth="75.0" text="Госномер" />
+                      <TableColumn prefWidth="75.0" text="Статус" />
+                    </columns>
+                  </TableView>
+               </children></AnchorPane>
         </items>
       </SplitPane>
    </center>
