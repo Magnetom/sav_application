@@ -38,11 +38,15 @@ public class SettingsController {
         Db db = Db.getInstance();
         // Получаем актуальное значение из БД.
         Object val = db.getSysVariable("mark_delay");
-        if (val == null || val.toString().equals("0")){
-            loopDelay.setText("15");
-        } else {
-            loopDelay.setText(val.toString());
-        }
+        if (val == null){
+            loopDelay.setText("0");
+        } else
+            if (val.toString().equals("0")){
+                loopDelay.setText("15");
+            }
+            else {
+                loopDelay.setText(val.toString());
+            }
 
         /* Настраиваем кнопку "СОХРАНИТЬ НАСТРОЙКИ" */
         saveButton.setOnAction(event -> saveAllSettings());

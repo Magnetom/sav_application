@@ -28,11 +28,14 @@ public class Main extends Application {
     private ScheduledService dbPollService; // Сервис опроса БД.
     private ScheduledService clockService; // Сервис-часы реального времени.
 
-    private Boolean manualSampleTrigger;
+    private boolean manualSampleTrigger;
 
+    private boolean startupOk;
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+        // Инициализация все глобальных и вспомогательных переменных.
+        initVariables();
 
         // Инициализируем графику.
         //Parent root = FXMLLoader.load(getClass().getResource("main.fxml"));
@@ -46,14 +49,19 @@ public class Main extends Application {
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
 
-        // Инициализируем подключение к БД.
-        dbInit();
+        // Инициализируем подключение к БД {sav}.
+        startupOk = dbInit();
         // Инициализация состояния основных элементов графического контроля и управления.
-        initControls();
-        // Инициализируем сервис для периодического опроса базы данных.
-        setupService();
+        if (startupOk) initControls();
+        // Инициализируем сервисы.
+        setupServices();
         // Инициализируем слушатаелей сообщений от различных модулей.
         setupBroadcastListeners();
+    }
+
+    private void initVariables() {
+        manualSampleTrigger = false;
+        startupOk = false;
     }
 
     private void setupBroadcastListeners() {
@@ -96,8 +104,10 @@ public class Main extends Application {
         Log.println("Набор переменных был загружен с сервера.");
     }
 
-    private void dbInit() {
+    private boolean dbInit() {
         db = Db.getInstance();
+        if (db != null) return db.isConnected();
+        return false;
     }
 
     public static void main(String[] args) {
@@ -105,7 +115,7 @@ public class Main extends Application {
     }
 
     // Настройка сервисов.
-    private void setupService(){
+    private void setupServices(){
 
         //**************************************************/
         /* Сервис для отображения часов реального времени. */
@@ -128,66 +138,69 @@ public class Main extends Application {
         //**********************************************************************************************************/
         /* Основной сервис. Делает периодические опросы БД. Инициирует вывод полученных данных в визуальные формы. */
         //**********************************************************************************************************/
-        dbPollService = new ScheduledService() {
-            @Override
-            protected Task createTask() {
-                return new Task<Void>() {
+        if (startupOk){
+            dbPollService = new ScheduledService() {
+                @Override
+                protected Task createTask() {
+                    return new Task<Void>() {
 
-                    @Override protected Void call() throws Exception {
-                        if (isCancelled()) {/* Do some actions. */}
-                        // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
-                        // не изменялись со времени последней выборки из БД.
+                        @Override protected Void call() throws Exception {
+                            if (isCancelled()) {/* Do some actions. */}
+                            // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
+                            // не изменялись со времени последней выборки из БД.
 
-                        try {
-                            if (db.isDatasetModifed() || manualSampleTrigger) {
-                                manualSampleTrigger = false;
+                            try {
+                                if (db.isDatasetModifed() || manualSampleTrigger) {
+                                    manualSampleTrigger = false;
 
-                                // Получаем список всех отметок за сегодняшнюю дату.
-                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
-                                // Обновляем GUI элемент из основного потока GUI.
-                                Platform.runLater(() -> mainController.printMarksLog(markList));
+                                    // Получаем список всех отметок за сегодняшнюю дату.
+                                    final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
+                                    // Обновляем GUI элемент из основного потока GUI.
+                                    Platform.runLater(() -> mainController.printMarksLog(markList));
 
-                                // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
-                                // Обновляем GUI элемент из основного потока GUI.
-                                Platform.runLater(() -> mainController.printStatisticList(statList));
+                                    // Получаем статистику по всем ТС за сегодняшнюю дату.
+                                    final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                                    // Обновляем GUI элемент из основного потока GUI.
+                                    Platform.runLater(() -> mainController.printStatisticList(statList));
 
-                                // Получаем список всех зарегистрированных ТС.
-                                final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
-                                // Обновляем GUI элемент из основного потока GUI.
-                                Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
+                                    // Получаем список всех зарегистрированных ТС.
+                                    final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
+                                    // Обновляем GUI элемент из основного потока GUI.
+                                    Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
 
-                                Log.println("Список изменений в наборе данных успешно загружен.");
+                                    Log.println("Список изменений в наборе данных успешно загружен.");
+                                }
+                            } catch (SQLException e){
+                                e.printStackTrace();
+                                Log.printerror(Db.TAG_SQL, "MAIN_THREAD",e.getMessage(), null);
                             }
-                        } catch (SQLException e){
-                            e.printStackTrace();
-                            Log.printerror(Db.TAG_SQL, "MAIN_THREAD",e.getMessage(), null);
+
+                            return null;
                         }
 
-                        return null;
-                    }
+                        @Override protected void succeeded() {
+                            super.succeeded();
+                            //Log.println("Запрос в базу данных выполнен.");
+                        }
 
-                    @Override protected void succeeded() {
-                        super.succeeded();
-                        //Log.println("Запрос в базу данных выполнен.");
-                    }
+                        @Override protected void cancelled() {
+                            super.cancelled();
+                            Log.println("Поток опроса базы данных приостановлен!");
+                        }
 
-                    @Override protected void cancelled() {
-                        super.cancelled();
-                        Log.println("Поток опроса базы данных приостановлен!");
-                    }
+                        @Override protected void failed() {
+                            super.failed();
+                            //dbPollService.cancel();
+                            dbPollService.restart();
+                            Log.println("Поток опроса базы данных завершился с ошибкой!");
+                        }
+                    };
+                }
+            };
+            //dbPollService.setDelay(new Duration(500));  // Задержка перед стартом.
+            dbPollService.setPeriod(new Duration(1000)); // Период повторения.
+            dbPollService.start();
+        }
 
-                    @Override protected void failed() {
-                        super.failed();
-                        //dbPollService.cancel();
-                        dbPollService.restart();
-                        Log.println("Поток опроса базы данных завершился с ошибкой!");
-                    }
-                };
-            }
-        };
-        //dbPollService.setDelay(new Duration(500));  // Задержка перед стартом.
-        dbPollService.setPeriod(new Duration(1000)); // Период повторения.
-        dbPollService.start();
     }
 }

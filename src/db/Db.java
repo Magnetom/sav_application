@@ -29,6 +29,7 @@ public class Db {
     }
 
     private Db(){
+
         // Подключаемся к БД сразу после создания экземпляра класса.
         connect();
      }
@@ -39,14 +40,20 @@ public class Db {
         if (conn != null) disconnect();
         try
         {
-            // Создается экземпляр класса драйвера длс яработы с MySQL сервером через JDBC-драйвер.
+            // Создается экземпляр класса драйвера для работы с MySQL сервером через JDBC-драйвер.
             Class.forName ("com.mysql.cj.jdbc.Driver").newInstance ();
+
+            ///////////////////////////////////////////////
+            // Пытаемся проверить метаданны базы данных {sav}. Метеданные не верный и не могут быть созданы - считаем,
+            // что дальнейшая работа с сервером БД невозможна.
+            if (!checkMetadate()) return false;
+            ///////////////////////////////////////////////
 
             // Данные для утсановки связи с MySQL сервером.
             String serverName = "localhost";
             String dbName     = "sav";
-            String userName   = "root";
-            String password   = "";
+            String userName   = "user";
+            String password   = "mysqluser";
 
             String url = "jdbc:MySQL://"+serverName+"/"+dbName;
             conn = DriverManager.getConnection (url, userName, password);
@@ -60,7 +67,6 @@ public class Db {
             ex.printStackTrace();
             return false;
         }
-
         return true;
     }
 
@@ -260,18 +266,103 @@ public class Db {
     }
 
     /* Возвращает TRUE если текущий набор даных на сервере изменился с момента последней выборки. */
-    public Boolean isDatasetModifed() throws SQLException {
+    public Boolean isDatasetModifed() {
         if(!isConnected()) return false;
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM variables WHERE name='dataset';");
-        if (rs.next()){
-            String value = rs.getString("value");
-            if (currDatasetHash == null || !currDatasetHash.equalsIgnoreCase(value)){
-                currDatasetHash = value;
-                return true;
+        ResultSet rs = null;
+
+        try {
+            rs = conn.createStatement().executeQuery("SELECT * FROM variables WHERE name='dataset';");
+            if (rs.next()){
+                String value = rs.getString("value");
+
+                if (currDatasetHash == null){
+                    currDatasetHash = value;
+                    return true;
+                }
+                if (currDatasetHash != null && !currDatasetHash.equalsIgnoreCase(value)){
+                    currDatasetHash = value;
+                    return true;
+                }
+                return false;
             }
+        } catch (SQLException e) {
+            //e.printStackTrace();
             return false;
         }
+        return false;
+    }
+
+    /* Прверка целостности БД. Создание БД и ее таблиц при необходимости. */
+    public Boolean checkMetadate(){
+        Log.println("Проверка целостности базы данных.");
+
+        try {
+            dbCreate(false);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.println("Проверка целостности базы данных завершилась с ошибками! Подробнее:");
+            Log.println(e.getLocalizedMessage());
+            return false;
+        }
+        Log.println("Проверка целостности базы данных завершена.");
         return true;
     }
 
+    /* Создамне базы данных и всех ее таблиц. */
+    // Если параметр remove = TRUE - удалить существующую БД перед сзданием новой.
+    public void dbCreate(boolean remove) throws Exception{
+        int result = 0;
+
+        // Данные для установки связи с MySQL сервером.
+        Connection cn = DriverManager.getConnection ("jdbc:MySQL://localhost", "admin", "mysqladmin");
+        Log.println("Соединение с MySQL-сервером установлено.");
+
+        if (remove) {
+            Log.println("Удаление базы данных {sav}.");
+            result = cn.createStatement().executeUpdate("DROP DATABASE IF EXISTS sav;");
+        }
+
+        // Создать базу данных {sav}, если отсутствует.
+        Log.println("Проверка существования/создание базы данных {sav}.");
+        result = cn.createStatement().executeUpdate("CREATE DATABASE IF NOT EXISTS sav;");
+
+        // Создать таблицу {marks}, если отсутствует.
+        Log.println("Проверка существования/создание табицы {marks}.");
+        result = cn.createStatement().executeUpdate("create table if not exists sav.marks\n" +
+                "(\n" +
+                "  id         int(11) unsigned auto_increment\n" +
+                "    primary key,\n" +
+                "  vehicle_id varchar(14)                         not null,\n" +
+                "  time       timestamp default CURRENT_TIMESTAMP not null,\n" +
+                "  mac        varchar(18)                         null,\n" +
+                "  request_id varchar(20)                         not null,\n" +
+                "  constraint request_id\n" +
+                "  unique (request_id)\n" +
+                ");");
+
+        // Создать таблицу {variables}, если отсутствует.
+        Log.println("Проверка существования/создание табицы {variables}.");
+        result = cn.createStatement().executeUpdate("create table if not exists sav.variables\n" +
+                "(\n" +
+                "  id    int unsigned auto_increment\n" +
+                "    primary key,\n" +
+                "  name  varchar(50) default 'unknown' not null,\n" +
+                "  value varchar(50) default 'unknown' not null,\n" +
+                "  constraint variable_unique\n" +
+                "  unique (name)\n" +
+                ");");
+
+        // Создать таблицу {vehicles}, если отсутствует.
+        Log.println("Проверка существования/создание табицы {vehicles}.");
+        result = cn.createStatement().executeUpdate("create table if not exists sav.vehicles\n" +
+                "(\n" +
+                "  id         int(11) unsigned auto_increment\n" +
+                "    primary key,\n" +
+                "  vehicle    varchar(18)                  not null,\n" +
+                "  popularity int(11) unsigned default '0' not null,\n" +
+                "  blocked    bit default b'0'             not null,\n" +
+                "  constraint vehicle_id\n" +
+                "  unique (vehicle)\n" +
+                ");");
+    }
 }
