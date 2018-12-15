@@ -45,14 +45,14 @@ public class Main extends Application {
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
         //primaryStage.setTitle("SAV v1.0 - the System of Accounting of Vehicles");
-        primaryStage.setTitle("SAV v1.0 - система учета ходок автотранспорта");
+        primaryStage.setTitle("SAV v1.2 - система учета ходок автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
 
         // Инициализируем подключение к БД {sav}.
         startupOk = dbInit();
         // Инициализация состояния основных элементов графического контроля и управления.
-        if (startupOk) initControls();
+        initControls(startupOk);
         // Инициализируем сервисы.
         setupServices();
         // Инициализируем слушатаелей сообщений от различных модулей.
@@ -69,7 +69,7 @@ public class Main extends Application {
         // Были произведены изменения в настройках БД.
         Broadcast.setSettingsChangedInterface(() -> {
             // Загружаем все настройки с сервера БД и визуализируем их заново.
-            initControls();
+            initControls(true);
             Log.println("Набор переменных на сервере изменен вручную.");
         });
 
@@ -80,7 +80,13 @@ public class Main extends Application {
         });
     }
 
-    private void initControls() {
+    private void initControls(boolean setupOk) {
+
+        // Если предыдущие инициализации провалились.
+        if (!setupOk){
+            mainController.setImageOffError();
+            return;
+        }
 
         /* Кнопка глобального Запрещения/Разрешения отметок. */
         // Проверяется наличие системной переменной global_blocked в БД.

@@ -346,13 +346,21 @@ public class MainController {
         }
     }
 
+    public void setImageOffError(){
+        OnOffImage.setImage(new Image("images/switch-off-red-48.png"));
+        OnOffImage.setDisable(true);
+        OnState = false;
+    }
+
     public void setImageOff(){
         OnOffImage.setImage(new Image("images/switch-off-gray-48.png"));
+        OnOffImage.setDisable(false);
         OnState = false;
     }
 
     public void setImageOn(){
         OnOffImage.setImage(new Image("images/switch-on-green-48.png"));
+        OnOffImage.setDisable(false);
         OnState = true;
     }
 
