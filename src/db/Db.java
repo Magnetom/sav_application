@@ -2,6 +2,7 @@ package db;
 
 import bebug.Log;
 import com.sun.istack.internal.Nullable;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import marks.VehicleItem;
 import marks.VehicleMark;
 
@@ -29,20 +30,32 @@ public class Db {
     }
 
     private Db(){
-
+        try {
+            // Создается экземпляр класса драйвера для работы с MySQL сервером через JDBC-драйвер.
+            Class.forName ("com.mysql.cj.jdbc.Driver").newInstance ();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_DB, "CONNECT","Невозможно создать экземпляр класса {com.mysql.cj.jdbc.Driver}.", e.getLocalizedMessage());
+            return;
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_DB, "CONNECT","Невозможно использовать экземпляр класса {com.mysql.cj.jdbc.Driver}", e.getLocalizedMessage());
+            return;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_DB, "CONNECT","Не найден класс {com.mysql.cj.jdbc.Driver} драйвера работы с базой данных.", e.getLocalizedMessage());
+            return;
+        }
         // Подключаемся к БД сразу после создания экземпляра класса.
         connect();
      }
 
     // Подключиться к предопределенной базе данных.
-    public boolean connect(){
+    private boolean connect(){
         // Если соединение уже было установленно ранее, закрываем старое соединение.
         if (conn != null) disconnect();
         try
         {
-            // Создается экземпляр класса драйвера для работы с MySQL сервером через JDBC-драйвер.
-            Class.forName ("com.mysql.cj.jdbc.Driver").newInstance ();
-
             ///////////////////////////////////////////////
             // Пытаемся проверить метаданны базы данных {sav}. Метеданные не верный и не могут быть созданы - считаем,
             // что дальнейшая работа с сервером БД невозможна.
@@ -62,8 +75,7 @@ public class Db {
         catch (Exception ex)
         {
             conn = null;
-            Log.println("Невозможно установить соединение с сервером бызы данных. Ошибка:");
-            Log.println(ex.getLocalizedMessage());
+            Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных!", ex.getLocalizedMessage());
             ex.printStackTrace();
             return false;
         }
@@ -71,6 +83,11 @@ public class Db {
     }
 
     public Boolean isConnected() {return conn!=null;}
+
+    public Boolean reConnect(){
+        Log.println("Попытка заново подключиться к базе данных.");
+        return connect();
+    }
 
     // Отключиться от базы данных.
     private void disconnect(){
@@ -81,8 +98,7 @@ public class Db {
                 Log.println("Связь с базой данных разорвана.");
             }
             catch (Exception ex) {
-                Log.println("Отключение от базы данных произошло с ошибкой:");
-                Log.println(ex.getLocalizedMessage());
+                Log.printerror(TAG_SQL, "DISCONNECT","Отключение от базы данных произошло с ошибкой!", ex.getLocalizedMessage());
             }
         }
     }
@@ -103,6 +119,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
             Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
             return false;
         }
@@ -122,7 +139,14 @@ public class Db {
     // Возвращает список/лог отметок за текущий день.
     public List<VehicleMark> getMarksRawList() throws SQLException {
         if(!isConnected()) return null;
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
+
+        ResultSet rs;
+        try {
+            rs = conn.createStatement().executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
+        } catch (SQLException e){
+            reConnect(); // Пытаемся переконнетиться.
+            throw e;
+        }
 
         List<VehicleMark> marksList = new ArrayList<>();
         while (rs.next()) {
@@ -139,7 +163,13 @@ public class Db {
     public List<VehicleItem> getAllVehicles() throws  SQLException{
         if(!isConnected()) return null;
 
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM vehicles");
+        ResultSet rs;
+        try {
+            rs = conn.createStatement().executeQuery("SELECT * FROM vehicles");
+        } catch (SQLException e){
+            reConnect(); // Пытаемся переконнетиться.
+            throw e;
+        }
 
         List<VehicleItem> vehiclesList = new ArrayList<>();
         while (rs.next()) {
@@ -158,7 +188,14 @@ public class Db {
     public List<String> getBlockedVehicles() throws  SQLException{
         if(!isConnected()) return null;
 
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM vehicles WHERE blocked='1'");
+        ResultSet rs;
+        try {
+            rs = conn.createStatement().executeQuery("SELECT * FROM vehicles WHERE blocked='1'");
+        } catch (SQLException e){
+            reConnect(); // Пытаемся переконнетиться.
+            throw e;
+        }
+
 
         List<String> blackList = new ArrayList<>();
         while (rs.next()) {
@@ -172,12 +209,19 @@ public class Db {
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
     public List<VehicleItem> getVehiclesStatistic(@Nullable List<VehicleMark> markList) throws SQLException{
+
         if(!isConnected()) return null;
         // Получаем (если это необходимо) лог отметок за текущий день.
         if (markList == null) markList = getMarksRawList();
 
         // Получаем список заблокированных ТС.
-        List<String> blackList = getBlockedVehicles();
+        List<String> blackList;
+        try {
+            blackList = getBlockedVehicles();
+        } catch (SQLException e){
+            reConnect(); // Пытаемся переконнетиться.
+            throw e;
+        }
 
         // Создаем экземпляр класса списка статистики.
         List<VehicleItem> list = new ArrayList<>();
@@ -239,6 +283,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "SET_SYS_VARIABLE",e.getMessage(), query);
+            reConnect(); // Пытаемся переконнетиться.
             return false;
         }
         return true;
@@ -261,6 +306,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "GET_SYS_VARIABLE",e.getMessage(), query);
+            reConnect(); // Пытаемся переконнетиться.
             return null;
         }
     }
@@ -286,7 +332,8 @@ public class Db {
                 return false;
             }
         } catch (SQLException e) {
-            //e.printStackTrace();
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
             return false;
         }
         return false;
@@ -302,6 +349,7 @@ public class Db {
             e.printStackTrace();
             Log.println("Проверка целостности базы данных завершилась с ошибками! Подробнее:");
             Log.println(e.getLocalizedMessage());
+            reConnect(); // Пытаемся переконнетиться.
             return false;
         }
         Log.println("Проверка целостности базы данных завершена.");
