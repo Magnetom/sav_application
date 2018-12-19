@@ -6,6 +6,7 @@ import com.sun.org.apache.xpath.internal.operations.Bool;
 import marks.VehicleItem;
 import marks.VehicleMark;
 
+import java.security.PublicKey;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,9 +66,10 @@ public class Db {
             // Данные для утсановки связи с MySQL сервером.
             String serverName = "localhost";
             String dbName     = "sav";
-            String userName   = "user";
-            String password   = "mysqluser";
-
+            //String userName   = "user";
+            //String password   = "mysqluser";
+            String userName   = "admin";
+            String password   = "mysqladmin";
             String url = "jdbc:MySQL://"+serverName+"/"+dbName;
             conn = DriverManager.getConnection (url, userName, password);
             Log.println("Соединение с базой данных установлено.");
@@ -107,6 +109,83 @@ public class Db {
     protected void finalize() throws Throwable {
         super.finalize();
         disconnect();
+    }
+
+    // Очистить БД полность.
+    public Boolean allDbRemove(){
+        Boolean result;
+        // Удаляются все ТС.
+        result = removeAllVehicles();
+        // Удаляются все отметки.
+        result &= removeMarks("");
+        // Удаляются все отметки.
+        result &= removeAllVariables();
+        return result;
+    }
+
+    // Удаляются все переменные.
+    private Boolean removeAllVariables() {
+        String query = "DELETE FROM variables;";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
+            Log.printerror(TAG_SQL, "REMOVE_ALL_VARIABLES",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+    // Очистить список ТС.
+    public Boolean removeAllVehicles() {
+        String query = "DELETE FROM vehicles;";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
+            Log.printerror(TAG_SQL, "REMOVE_ALL_VEHICLES",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+    // Очистить все рейтинги популярности.
+    public Boolean resetPopularity(){
+        if(!isConnected()) return false;
+        String query = "UPDATE vehicles SET popularity=0;";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
+            Log.printerror(TAG_SQL, "RESET_ALL_POPULARITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+
+    // Удалить все отметки за все сегодняшнюю дату (частичная очистка БД).
+    // Если в качестве параметра указан NULL, то удалить только за текущую дату.
+    // Если пустая строка, то удалить все данные.
+    public Boolean removeMarks(String date){
+        String condition = "";
+        if (date == null) condition = "WHERE DATE(time)=DATE(NOW());";
+        else
+        if (!date.equals("")) condition = "WHERE DATE(time)=DATE('"+date+"');";
+
+        String query = "DELETE FROM marks "+ condition;
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнетиться.
+            Log.printerror(TAG_SQL, "REMOVE_MARKS",e.getMessage(), query);
+            return false;
+        }
+        return true;
     }
 
     // Установить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
@@ -349,7 +428,6 @@ public class Db {
             e.printStackTrace();
             Log.println("Проверка целостности базы данных завершилась с ошибками! Подробнее:");
             Log.println(e.getLocalizedMessage());
-            reConnect(); // Пытаемся переконнетиться.
             return false;
         }
         Log.println("Проверка целостности базы данных завершена.");
@@ -412,5 +490,7 @@ public class Db {
                 "  constraint vehicle_id\n" +
                 "  unique (vehicle)\n" +
                 ");");
+        // Закрываем соединение.
+        cn.close();
     }
 }

@@ -46,6 +46,10 @@ public class DateTime {
     public static String getTimeDDMMYYYY(){
         return getFormattedDataTime(System.currentTimeMillis(), DDMMYYYY_DATA_FORMAT);
     }
+
+    public static String getTimeYYYYMMDD(){
+        return getFormattedDataTime(System.currentTimeMillis(), YYYYMMDD_DATA_FORMAT);
+    }
     public static String getTimeKK(){
         return getFormattedDataTime(System.currentTimeMillis(), KK_TIME_FORMAT);
     }
