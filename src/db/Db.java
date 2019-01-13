@@ -1,12 +1,12 @@
 package db;
 
 import bebug.Log;
+import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import utils.Utils;
 
-import java.security.PublicKey;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +60,7 @@ public class Db {
             ///////////////////////////////////////////////
             // Пытаемся проверить метаданны базы данных {sav}. Метеданные не верный и не могут быть созданы - считаем,
             // что дальнейшая работа с сервером БД невозможна.
-            if (!checkMetadate()) return false;
+            if (!checkMetadata()) return false;
             ///////////////////////////////////////////////
 
             // Данные для утсановки связи с MySQL сервером.
@@ -117,7 +117,7 @@ public class Db {
         // Удаляются все ТС.
         result = removeAllVehicles();
         // Удаляются все отметки.
-        result &= removeMarks("");
+        result &= removeMarks(null,"",null);
         // Удаляются все отметки.
         result &= removeAllVariables();
         return result;
@@ -130,7 +130,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VARIABLES",e.getMessage(), query);
             return false;
         }
@@ -144,7 +144,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VEHICLES",e.getMessage(), query);
             return false;
         }
@@ -159,29 +159,78 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "RESET_ALL_POPULARITY",e.getMessage(), query);
             return false;
         }
         return true;
     }
 
+    /* Brief: Ручная установка отметки ТС.
+     *
+     * @vehicle   - госномер ТС для которого будет выполнена отметка.
+     * @timestamp - метка времени, которая будет присвоена отметке. Если в качестве этого параметра
+     *              передано NULL (или пустая строка), то отметка выполняется с текущей меткой времени.
+     */
+    public Boolean addMark(@NotNull  String vehicle,
+                           @Nullable String timestamp){
 
-    // Удалить все отметки за все сегодняшнюю дату (частичная очистка БД).
-    // Если в качестве параметра указан NULL, то удалить только за текущую дату.
-    // Если пустая строка, то удалить все данные.
-    public Boolean removeMarks(String date){
-        String condition = "";
-        if (date == null) condition = "WHERE DATE(time)=DATE(NOW());";
+        if (vehicle==null || vehicle.isEmpty()) return false;
+
+        String request_id = Utils.genStrongUidString(20);
+        String writer_id = "application";
+        String query;
+
+        if (timestamp == null || timestamp.isEmpty())
+            query = "INSERT INTO marks (vehicle_id,mac,request_id) " +
+                    "VALUES ('"+vehicle+"','"+writer_id+"','"+request_id+"');";
         else
-        if (!date.equals("")) condition = "WHERE DATE(time)=DATE('"+date+"');";
+            query = "INSERT INTO marks (vehicle_id,mac,request_id,time) " +
+                    "VALUES ('"+vehicle+"','"+writer_id+"','"+request_id+"','"+timestamp+"');";
 
-        String query = "DELETE FROM marks "+ condition;
         try {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            Log.printerror(TAG_SQL, "ADD_MARK",e.getMessage(), query);
+            reConnect(); // Пытаемся переконнектиться.
+            return false;
+        }
+
+        return true;
+    }
+
+    /* Brief: Удалить все отметки за все сегодняшнюю дату (частичная очистка БД).
+     *
+     * Если указан параметр @recordId, все остальные условия обрасываются.
+     * @recordId - уникальный идентификатор записи (строки).
+     *
+     * Если в качестве параметра @date указан NULL, то удалить только за текущую дату.
+     * Если @date - пустая строка, то удалить все данные.
+     *
+     * Если в качестве параметра @vehicle указан NULL или пустая строка, то выборка будет касаться всех ТС.
+     * Если @vehicle - не пустая строка, то выборка будет касаться только указанного ТС.
+    */
+    public Boolean removeMarks(@Nullable Integer recordId,
+                               @Nullable String date,
+                               @Nullable String vehicle){
+        String condition = "";
+        if (recordId != null) condition = " WHERE id='"+recordId.toString()+"'";
+        else
+        if (date == null) condition = "WHERE DATE(time)=DATE(NOW())";
+        else
+        if (!date.equals("")) condition = "WHERE DATE(time)=DATE('"+date+"')";
+
+        // Дополнительное условие - выборка только для конкретного ТС.
+        if (vehicle!=null && !vehicle.isEmpty() && recordId == null) condition += " AND vehicle_id='"+vehicle+"'";
+        
+        
+        String query = "DELETE FROM marks "+ condition + ";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            reConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_MARKS",e.getMessage(), query);
             return false;
         }
@@ -198,7 +247,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
             return false;
         }
@@ -223,7 +272,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM marks WHERE DATE(time)=DATE(NOW());");
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -231,8 +280,10 @@ public class Db {
         while (rs.next()) {
             String timestamp = getHHMMFromStringTimestamp(rs.getString("time"));
             String vehicle   = rs.getString("vehicle_id");
+            String requestId = rs.getString("request_id");
+            int    recordId  = rs.getInt("id");
 
-            VehicleMark mark = new VehicleMark(timestamp, vehicle);
+            VehicleMark mark = new VehicleMark(timestamp, vehicle, requestId, recordId);
             marksList.add(mark);
         }
         return marksList;
@@ -246,7 +297,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM vehicles");
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -271,7 +322,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM vehicles WHERE blocked='1'");
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -298,7 +349,7 @@ public class Db {
         try {
             blackList = getBlockedVehicles();
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -362,7 +413,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "SET_SYS_VARIABLE",e.getMessage(), query);
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             return false;
         }
         return true;
@@ -385,15 +436,15 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "GET_SYS_VARIABLE",e.getMessage(), query);
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             return null;
         }
     }
 
     /* Возвращает TRUE если текущий набор даных на сервере изменился с момента последней выборки. */
-    public Boolean isDatasetModifed() {
+    public Boolean isDatasetModified() {
         if(!isConnected()) return false;
-        ResultSet rs = null;
+        ResultSet rs;
 
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM variables WHERE name='dataset';");
@@ -404,7 +455,7 @@ public class Db {
                     currDatasetHash = value;
                     return true;
                 }
-                if (currDatasetHash != null && !currDatasetHash.equalsIgnoreCase(value)){
+                if (!currDatasetHash.equalsIgnoreCase(value)){
                     currDatasetHash = value;
                     return true;
                 }
@@ -412,14 +463,14 @@ public class Db {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнетиться.
+            reConnect(); // Пытаемся переконнектиться.
             return false;
         }
         return false;
     }
 
     /* Прверка целостности БД. Создание БД и ее таблиц при необходимости. */
-    public Boolean checkMetadate(){
+    public Boolean checkMetadata(){
         Log.println("Проверка целостности базы данных.");
 
         try {

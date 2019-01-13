@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 
 import static broadcast.Broadcast.DatasetManualChangedNotification;
 import static broadcast.Broadcast.SettingsChangedNotification;
-import static utils.utils.*;
+import static utils.Utils.*;
 
 public class SettingsController {
 
@@ -96,14 +96,14 @@ public class SettingsController {
 
     private void clearAllMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks("");
+        Db.getInstance().removeMarks(null,"", null);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
 
     private void clearTodayMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null);
+        Db.getInstance().removeMarks(null,null, null);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
@@ -123,11 +123,10 @@ public class SettingsController {
         SettingsChangedNotification();
     }
 
-    protected void closeWindow(){
+    private void closeWindow(){
         // get a handle to the stage
         Stage stage = (Stage) closeButton.getScene().getWindow();
         // do what you have to do
         stage.close();
     }
-
 }

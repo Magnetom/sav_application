@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.BorderPane?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8.0.111"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="dialogs.exception.ExceptionPane">
+
+    <center>
+        <TextArea fx:id="stackTrace" editable="false" wrapText="false" />
+    </center>
+    <top>
+        <Label fx:id="message" />
+    </top>
+</BorderPane>

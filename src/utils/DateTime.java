@@ -22,6 +22,20 @@ public class DateTime {
     public final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
 
 
+    /**
+     *
+     * @return yyyy-MM-dd HH:mm:ss formate date as string
+     */
+    public static String getCurrentTimeStamp(){
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+            return dateFormat.format(new Date(System.currentTimeMillis()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private static String getFormattedDataTime(long timestamp, final String format){
         SimpleDateFormat simpleFormat = new SimpleDateFormat(format, Locale.getDefault());
         if (timestamp == 0) return simpleFormat.format(0);

@@ -26,7 +26,6 @@ public class Main extends Application {
 
     private Db db; // Класс для доступа к БД.
     private ScheduledService dbPollService; // Сервис опроса БД.
-    private ScheduledService clockService; // Сервис-часы реального времени.
 
     private boolean manualSampleTrigger;
 
@@ -45,9 +44,11 @@ public class Main extends Application {
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
         //primaryStage.setTitle("SAV v1.0 - the System of Accounting of Vehicles");
-        primaryStage.setTitle("SAV v1.2 - система учета ходок автотранспорта");
+        primaryStage.setTitle("\"АУРА\" v1.3 - система Автоматизированного Учета Рейсов Автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
+        // Закрываем все дочерние окна, поражденные основным контроллером.
+        primaryStage.setOnCloseRequest(event -> mainController.closeAllChildStages());
 
         // Инициализируем подключение к БД {sav}.
         startupOk = dbInit();
@@ -126,12 +127,13 @@ public class Main extends Application {
         //**************************************************/
         /* Сервис для отображения часов реального времени. */
         //**************************************************/
-        clockService = new ScheduledService() {
+        // Сервис-часы реального времени.
+        ScheduledService clockService = new ScheduledService() {
             @Override
             protected Task createTask() {
                 return new Task() {
                     @Override
-                    protected Object call() throws Exception {
+                    protected Object call() {
                         Platform.runLater(() -> mainController.refreshClocks());
                         return null;
                     }
@@ -150,13 +152,12 @@ public class Main extends Application {
                 protected Task createTask() {
                     return new Task<Void>() {
 
-                        @Override protected Void call() throws Exception {
-                            if (isCancelled()) {/* Do some actions. */}
+                        @Override protected Void call() {
+
                             // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
                             // не изменялись со времени последней выборки из БД.
-
                             try {
-                                if (db.isDatasetModifed() || manualSampleTrigger) {
+                                if (db.isDatasetModified() || manualSampleTrigger) {
                                     manualSampleTrigger = false;
 
                                     // Получаем список всех отметок за сегодняшнюю дату.

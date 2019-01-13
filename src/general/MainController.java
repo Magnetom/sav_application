@@ -4,6 +4,11 @@ import bebug.Log;
 import bebug.LogInterface;
 import broadcast.Broadcast;
 import db.Db;
+import db.DbProc;
+import dialogs.datetime.DateTimeDialog;
+import dialogs.datetime.TimestampPickedInterface;
+import enums.Users;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -23,8 +28,10 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import marks.Statuses;
 import marks.VehicleItem;
 import marks.VehicleMark;
@@ -33,9 +40,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import static utils.DateTime.*;
-import static utils.hash.*;
+import static utils.Hash.*;
 
 public class MainController {
+
     public TextArea  debugLogArea;
     public TableView todayVehiclesMarksLog;
     public TableView todayVehiclesStatistic;
@@ -50,7 +58,7 @@ public class MainController {
 
     // Отображение текущей настройки времянного интервала.
     public Label markDelay;
-
+    public AnchorPane headerPane;
 
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
@@ -59,9 +67,19 @@ public class MainController {
 
     private Boolean OnState;
 
+    private Users currentUserType;
+
+    private ContextMenu contextMenu;
+
+    private Stage setupStage;
+
+    private static SettingsController settingsController;
+
     /* Конструктор класса */
     public  MainController(){
         OnState = false;
+
+        currentUserType = Users.USER;
 
         filteredVehicles = new ArrayList<>();
 
@@ -79,37 +97,17 @@ public class MainController {
         });
     }
 
+    // Закрывает (если они все-еще открыты) все дочерние окна, поражденные этим контроллером.
+    public void closeAllChildStages(){
+        // Закрываем инженерное меню, если оно все-еще открыто.
+        if (setupStage!=null)setupStage.close();
+    }
+
     /* Полная очистка GUI интерфейса и реинициализация. */
-    public void initAllGUIs(){
+    private void initAllGUIs(){
 
         // Очищается лог событий.
         if (debugLogArea != null) debugLogArea.setText("");
-
-        // Настраивается лог отметок.
-        if (todayVehiclesMarksLog != null) {
-
-            todayVehiclesMarksLog.getColumns().clear();
-
-            TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Время");
-            TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
-
-            // Defines how to fill data for each cell.
-            timestampColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
-            vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
-
-            timestampColumn.setMinWidth(40);
-            vehicleColumn.setMinWidth(90);
-
-            timestampColumn.setStyle("-fx-alignment: CENTER;");
-            //vehicleColumn.setStyle("-fx-alignment: CENTER;");
-
-            // Set Sort type for userName column
-            timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
-            timestampColumn.setSortable(true);
-
-            // Добавляем новые колонки.
-            todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn);
-        }
 
         // Настраиваем список подробной статистики по каждому госномеру.
         if (todayVehiclesStatistic != null){
@@ -118,7 +116,7 @@ public class MainController {
             todayVehiclesStatistic.setEditable(true);
 
             TableColumn <VehicleItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Integer>  loopsColumn    = new TableColumn<>("Кругов");
+            TableColumn <VehicleItem, Integer>  loopsColumn    = new TableColumn<>("Рейсов");
             TableColumn <VehicleItem, Statuses> statusColumn   = new TableColumn<>("Статус");
             TableColumn <VehicleItem, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
 
@@ -164,8 +162,40 @@ public class MainController {
                 return cell;
             });
 
+            // Настраиваем контекстное меню.
+            setupStatisticContextMenu();
+
             // Добавляем новые колонки.
             todayVehiclesStatistic.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
+        }
+
+        // Настраивается лог отметок.
+        if (todayVehiclesMarksLog != null) {
+
+            todayVehiclesMarksLog.getColumns().clear();
+
+            TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Время");
+            TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
+
+            // Defines how to fill data for each cell.
+            timestampColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
+            vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
+
+            timestampColumn.setMinWidth(40);
+            vehicleColumn.setMinWidth(90);
+
+            timestampColumn.setStyle("-fx-alignment: CENTER;");
+            //vehicleColumn.setStyle("-fx-alignment: CENTER;");
+
+            // Set Sort type for userName column
+            timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
+            timestampColumn.setSortable(true);
+
+            // Настраиваем контекстное меню.
+            setupTodayVehiclesMarksLogContextMenu();
+
+            // Добавляем новые колонки.
+            todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn);
         }
 
         // Настраиваем отображение списока всех госномеров.
@@ -174,7 +204,7 @@ public class MainController {
             allDbVehiclesList.setEditable(true);
 
             TableColumn <VehicleItem, String>   vehicleColumn    = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Рейтинг");
+            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Рейсов");
             TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус");
 
             vehicleColumn.setMinWidth(90);
@@ -201,6 +231,101 @@ public class MainController {
             // Добавляем новые колонки.
             allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn);
         }
+    }
+
+    // Контекстное меню для списка текущих отметок.
+    private void setupTodayVehiclesMarksLogContextMenu(){
+        todayVehiclesMarksLog.setRowFactory((Callback<TableView<VehicleMark>, TableRow<VehicleMark>>) tableView -> {
+            final TableRow<VehicleMark> row = new TableRow<>();
+            final ContextMenu rowMenu = new ContextMenu();
+            final SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
+
+            // Элемент выпадающего меню для администратора - "УДАЛИТЬ ОТМЕТКУ".
+            final MenuItem removeItem = new MenuItem("Удалить отметку");
+            removeItem.setOnAction(event -> {
+                DbProc.clearMark(row.getItem().getRecordId());
+            });
+
+            // Элемент выпадающего меню для администратора - "ДОБАВИТЬ ОТМЕТКУ".
+            final MenuItem addItem = new MenuItem("Добавить отметку");
+            addItem.setOnAction(event -> {
+                addMarkManually(row.getItem().getVehicle());
+            });
+
+            // Элемент выпадающего меню для обычного пользователя.
+            final MenuItem dummyItem = new MenuItem( "dummy");
+            dummyItem.setOnAction(event -> {
+                /* ToDo: for future */
+            });
+
+            rowMenu.getItems().addAll(dummyItem);
+
+            rowMenu.setOnShowing(event -> {
+                // Удаляем все элементы и пересоздаем меню с учетом различных факторов и состояний.
+                rowMenu.getItems().clear();
+                // Естанавливаем имя для элемента "dummy" контекстного меню.
+                dummyItem.setText(((VehicleMark)row.getItem()).getTimestamp());
+                // Создаем меню с учетом прав текущего пользователя.
+                switch (currentUserType){
+                    case ADMIN: rowMenu.getItems().addAll(addItem,removeItem);
+                        break;
+                    case USER:  rowMenu.getItems().addAll(dummyItem);
+                        break;
+                }
+            });
+
+            // only display context menu for non-null items:
+            row.contextMenuProperty().bind(
+                    Bindings.when(Bindings.isNotNull(row.itemProperty()))
+                            .then(rowMenu)
+                            .otherwise((ContextMenu)null));
+            return row;
+        });
+    }
+
+    // Контекстное меню для списка статистики.
+    private void setupStatisticContextMenu(){
+
+        todayVehiclesStatistic.setRowFactory((Callback<TableView<VehicleItem>, TableRow<VehicleItem>>) tableView -> {
+                    final TableRow<VehicleItem> row = new TableRow<>();
+                    final ContextMenu rowMenu = new ContextMenu();
+                    final SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
+
+                    // Элемент выпадающего меню для администратора.
+                    final MenuItem removeItem = new MenuItem("Удалить рейсы (текущая дата)");
+                    removeItem.setOnAction(event -> {
+                        DbProc.clearTodayMarks(row.getItem().getVehicle());
+
+                    });
+                    // Элемент выпадающего меню для обычного пользователя.
+                    final MenuItem dummyItem = new MenuItem( "dummy");
+                        dummyItem.setOnAction(event -> {
+                            /* ToDo: for future */
+                    });
+
+                    rowMenu.getItems().addAll(dummyItem);
+
+                    rowMenu.setOnShowing(event -> {
+                        // Удаляем все элементы и пересоздаем меню с учетом различных факторов и состояний.
+                        rowMenu.getItems().clear();
+                        // Естанавливаем имя для элемента "dummy" контекстного меню.
+                        dummyItem.setText(row.getItem().getVehicle());
+                        // Создаем меню с учетом прав текущего пользователя.
+                        switch (currentUserType){
+                            case ADMIN: rowMenu.getItems().addAll(removeItem/*, separatorMenuItem*/);
+                                break;
+                            case USER:  rowMenu.getItems().addAll(dummyItem);
+                                break;
+                        }
+                    });
+
+                    // only display context menu for non-null items:
+                    row.contextMenuProperty().bind(
+                            Bindings.when(Bindings.isNotNull(row.itemProperty()))
+                                    .then(rowMenu)
+                                    .otherwise((ContextMenu)null));
+                    return row;
+                });
     }
 
     private void setupStatusComboBox(TableColumn <VehicleItem, Statuses> column){
@@ -255,6 +380,8 @@ public class MainController {
 
         setImageOff();
 
+        setupAccountVisualStyle();
+
         OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             boolean result = false;
 
@@ -282,6 +409,37 @@ public class MainController {
                 }
             }
         });
+
+        // Создаем слушателя на изменение текущего аккаунта.
+        Broadcast.setAccountInterface(newUser -> {
+            currentUserType = newUser;
+            setupAccountVisualStyle();
+        });
+    }
+
+    // Установить визуальное оформление согласно текущему пользователю/аккаунту.
+    private void setupAccountVisualStyle(){
+        switch (currentUserType){
+            case USER:
+                setUserVisualStyle();
+                break;
+            case ADMIN:
+                setAdminVisualStyle();
+                break;
+                default:
+                    setUserVisualStyle();
+                    break;
+        }
+    }
+
+    // Установить визуальный режим "Пользователь" - верхняя панель управления стандартным серым цветом.
+    private void setUserVisualStyle(){
+        headerPane.setStyle("-fx-background-color: transparent");
+    }
+
+    // Установить визуальный режим "Администратор" - верхняя панель управления красным цветом.
+    private void setAdminVisualStyle(){
+        headerPane.setStyle("-fx-background-color: orangered");
     }
 
     // Обновить список фильтра отметок.
@@ -297,13 +455,15 @@ public class MainController {
         refreshMarksLogFilter();
     }
 
-    // Применить фильтр отметок с списку отметок.
+    // Применить фильтр отметок к списку отметок.
     private void refreshMarksLogFilter(){
         // Если фильтр не пуст - применяем его, в противном случае - показываем все данные.
-        if (!filteredVehicles.isEmpty()){
-            if (filteredVehicles != null) filteredData.setPredicate(x -> filteredVehicles.contains(x.getVehicle()));
-        } else {
-            if (filteredVehicles != null) filteredData.setPredicate(x -> true);// разрешаем все данные.
+        if (filteredVehicles != null){
+            if (!filteredVehicles.isEmpty()){
+                filteredData.setPredicate(x -> filteredVehicles.contains(x.getVehicle()));
+            } else {
+                filteredData.setPredicate(x -> true);// разрешаем все данные.
+            }
         }
     }
 
@@ -320,7 +480,7 @@ public class MainController {
 
 
     // Заполняется лог отметок.
-    public void printMarksLog(ObservableList<VehicleMark> list){
+    void printMarksLog(ObservableList<VehicleMark> list){
         // Заполняем список данными.
         if (todayVehiclesMarksLog != null) {
             filteredData = new FilteredList(list);
@@ -334,7 +494,7 @@ public class MainController {
     }
 
     // Заполняется лог статиcтики.
-    public void printStatisticList(ObservableList<VehicleItem> list){
+    void printStatisticList(ObservableList<VehicleItem> list){
         // Заполняем список данными.
         if (todayVehiclesStatistic != null) {
             // Копируем все отмеченные ранее пользователем чекбоксы "Фильтр" из предыдущего списка.
@@ -344,26 +504,26 @@ public class MainController {
         }
     }
 
-    public void setImageOffError(){
+    void setImageOffError(){
         OnOffImage.setImage(new Image("images/switch-off-red-48.png"));
         OnOffImage.setDisable(true);
         OnState = false;
     }
 
-    public void setImageOff(){
+    void setImageOff(){
         OnOffImage.setImage(new Image("images/switch-off-gray-48.png"));
         OnOffImage.setDisable(false);
         OnState = false;
     }
 
-    public void setImageOn(){
+    void setImageOn(){
         OnOffImage.setImage(new Image("images/switch-on-green-48.png"));
         OnOffImage.setDisable(false);
         OnState = true;
     }
 
-    static boolean oddTick = false;
-    public void refreshClocks(){
+    private static boolean oddTick = false;
+    void refreshClocks(){
 
         clockHour.setText(getTimeKK());   // Устанавливаем часы.
         clockMinutes.setText(getTimeMM());// Устанавливаем минуты.
@@ -378,7 +538,7 @@ public class MainController {
         oddTick = !oddTick;
     }
 
-    public void setMarkDelayView(String value){
+    void setMarkDelayView(String value){
         markDelay.setText(value);
     }
 
@@ -389,7 +549,8 @@ public class MainController {
         GridPane grid = new GridPane();
         grid.add(passwordPasswordField, 0, 0);
         grid.setStyle("-fx-alignment: center");
-        passwordPasswordField.setFocusTraversable(true);
+        passwordPasswordField.setFocusTraversable(false);
+        passwordPasswordField.requestFocus();
 
         // Настраиваем диалоговое окно.
         Dialog<String> dialog = new Dialog<>();
@@ -401,19 +562,39 @@ public class MainController {
             // Сравниваем хэш-суммы паролей.
             String str = MD5(passwordPasswordField.getText());
             // Если верный пароль, даем доступ к меню настроек.
+            if ( str != null )
             if ( str.equalsIgnoreCase("eb0a191797624dd3a48fa681d3061212")){
-                // ToDo: открыть окно настроек
-                /////////////////////////////////////////////////////////////////////////
+
+                /////////////////////////////
+                // Запускаем окно настроек //
+                /////////////////////////////
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("settings.fxml"));
                 Parent root = null;
                 try {
                     root = loader.load();
                     //SettingsController settingsController = loader.getController();
-                    Stage stage = new Stage();
-                    stage.getIcons().add(new Image("/images/services-32.png"));
-                    stage.setTitle("Настройки сервера базы данных");
-                    stage.setScene(new Scene(root, -1, -1));
-                    stage.show();
+                    setupStage = new Stage();
+                    setupStage.getIcons().add(new Image("/images/services-32.png"));
+                    setupStage.setTitle("Настройки сервера базы данных");
+                    setupStage.setScene(new Scene(root, -1, -1));
+
+                    // Событие при открытии окна.
+                    setupStage.setOnShown(event2 -> {
+                        // Изменяет текущий аккаунт на "ADMIN".
+                        if (Broadcast.getAccountInterface() != null){
+                            Broadcast.getAccountInterface().wasChanged(Users.ADMIN);
+                        }
+                    });
+
+                    // Событие при закрытии окна.
+                    setupStage.setOnCloseRequest(event22 -> {
+                        // Изменяет текущий аккаунт на "USER".
+                        if (Broadcast.getAccountInterface() != null){
+                            Broadcast.getAccountInterface().wasChanged(Users.USER);
+                        }
+                    });
+
+                    setupStage.show();
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -432,10 +613,20 @@ public class MainController {
         dialog.showAndWait();
     }
 
-    public void printAllVehicles(ObservableList<VehicleItem> list){
+    void printAllVehicles(ObservableList<VehicleItem> list){
         if (allDbVehiclesList != null){
             // Заполняем таблицу данными.
             allDbVehiclesList.setItems(list);
         }
     }
+
+
+    private void addMarkManually(String vehicle){
+
+        // Настраиваем диалоговое окно для получения времянной метки новой отметки.
+        DateTimeDialog dialog = new DateTimeDialog();
+        dialog.setInterface((timestamp, comment) -> DbProc.addMark(vehicle, timestamp, comment));
+        dialog.showAndWait();
+    }
+
 }
