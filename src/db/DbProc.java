@@ -25,7 +25,7 @@ public class DbProc {
         if (vehicle == null) return;
 
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().addMark(vehicle,timestamp);
+        Db.getInstance().addMark(vehicle,timestamp,comment);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }

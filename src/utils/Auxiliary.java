@@ -4,7 +4,7 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.Random;
 
-public class Utils {
+public class Auxiliary {
 
     public static boolean isNumeric(String str)
     {
@@ -48,4 +48,11 @@ public class Utils {
         }
         return text;
     }
+
+    public static String alignTwo(int src){
+        String s1 = Integer.valueOf(src).toString();
+        if (s1.length() == 1) s1 = "0" + s1;
+        return s1;
+    }
 }
+

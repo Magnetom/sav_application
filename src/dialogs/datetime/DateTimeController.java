@@ -1,20 +1,13 @@
 package dialogs.datetime;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javafx.util.converter.DateTimeStringConverter;
+import utils.Auxiliary;
 import utils.DateTime;
-import utils.Utils;
-
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -147,7 +140,7 @@ public class DateTimeController {
         });
     }
 
-    public String getComment(){return Utils.constrainLength(commentField.getText(), MAX_COMMENT_LENGTH);}
+    public String getComment(){return Auxiliary.constrainLength(commentField.getText(), MAX_COMMENT_LENGTH);}
 
     public String getTimestamp() {return timestamp;}
 

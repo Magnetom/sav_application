@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+    <network>
+        <server_address >192.168.1.2</server_address>
+    </network>
+</settings>

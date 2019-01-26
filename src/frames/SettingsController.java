@@ -1,4 +1,4 @@
-package general;
+package frames;
 
 import db.Db;
 import javafx.fxml.FXML;
@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 
 import static broadcast.Broadcast.DatasetManualChangedNotification;
 import static broadcast.Broadcast.SettingsChangedNotification;
-import static utils.Utils.*;
+import static utils.Auxiliary.isNumeric;
 
 public class SettingsController {
 

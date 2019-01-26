@@ -17,10 +17,17 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import settings.LocalSettings;
+import utils.Auxiliary;
 
 import java.sql.SQLException;
 
 public class Main extends Application {
+
+    public static int SW_RELEASE  = 1;
+    public static int SW_VERSION  = 5;
+    public static int SW_REVISION = 2;
+    public static final String SW_VERSION_S = SW_RELEASE + "." + Auxiliary.alignTwo(SW_VERSION) + "." + Auxiliary.alignTwo(SW_REVISION);
 
     private static MainController mainController;
 
@@ -36,6 +43,9 @@ public class Main extends Application {
         // Инициализация все глобальных и вспомогательных переменных.
         initVariables();
 
+        // Загрузка локальных настоек в кеш настроек.
+        initLocalSettings();
+
         // Инициализируем графику.
         //Parent root = FXMLLoader.load(getClass().getResource("main.fxml"));
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
@@ -44,7 +54,7 @@ public class Main extends Application {
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
         //primaryStage.setTitle("SAV v1.0 - the System of Accounting of Vehicles");
-        primaryStage.setTitle("\"АУРА\" v1.3 - система Автоматизированного Учета Рейсов Автотранспорта");
+        primaryStage.setTitle("\"АУРА\" v"+ SW_VERSION_S +" - система Автоматизированного Учета Рейсов Автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
         // Закрываем все дочерние окна, поражденные основным контроллером.
@@ -58,6 +68,10 @@ public class Main extends Application {
         setupServices();
         // Инициализируем слушатаелей сообщений от различных модулей.
         setupBroadcastListeners();
+    }
+
+    private void initLocalSettings() {
+        LocalSettings.reloadSettings();
     }
 
     private void initVariables() {
@@ -91,7 +105,7 @@ public class Main extends Application {
 
         /* Кнопка глобального Запрещения/Разрешения отметок. */
         // Проверяется наличие системной переменной global_blocked в БД.
-        Object val = db.getSysVariable("global_blocked");
+        Object val = db.getSysVariable(Db.TABLE_VARIABLES_ROWS.SYS_VAR_GLOBAL_BLOCKED);
         // Если она отсутствует, то считаем, что эта переменная включена.
         // Если ее значение "1", то это также означает, что переменная включена.
         if (val == null || val.toString().equals("1")){
@@ -101,7 +115,7 @@ public class Main extends Application {
         }
 
         /* Отображение текущего интервала между отметками. */
-        val = db.getSysVariable("mark_delay");
+        val = db.getSysVariable(Db.TABLE_VARIABLES_ROWS.SYS_VAR_MARK_DELAY);
         if (val == null || val.toString().equals("0")){
             mainController.setMarkDelayView("15*");
         } else {
