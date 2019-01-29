@@ -65,7 +65,7 @@ public class MainController {
 
     private FilteredList<VehicleMark> filteredData;
 
-    private Boolean OnState;
+    private boolean controlButton;
 
     private Users currentUserType;
 
@@ -77,7 +77,8 @@ public class MainController {
 
     /* Конструктор класса */
     public  MainController(){
-        OnState = false;
+
+        controlButton = false;
 
         currentUserType = Users.USER;
 
@@ -444,13 +445,17 @@ public class MainController {
         OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             boolean result = false;
 
-            OnState = !OnState;
-
             // Создаем новый экземпляр для работы с БД.
             Db db = Db.getInstance();
-            if (OnState){
-                if (db.isConnected()) result = db.setGlobalBlock(false);
-                if (result) {
+
+            // Если связь с БД не установленна, инициируется попытка установить в ней связь.
+            if (!db.isConnected()){
+                if (Broadcast.getDbReconectionRequest() != null) Broadcast.getDbReconectionRequest().doReconnect();
+                return;
+            }
+
+            if (controlButton = !controlButton){
+                if (db.setGlobalBlock(false)) {
                     Log.println("Установлено глобальное РАЗРЕШЕНИЕ на выполнение отметок.");
                     setImageOn();
                 } else {
@@ -458,8 +463,7 @@ public class MainController {
                     setImageOff();
                 }
             } else {
-                if (db.isConnected()) result = db.setGlobalBlock(true);
-                if (result) {
+                if (db.setGlobalBlock(true)) {
                     Log.println("Установлено глобальное ЗАПРЕЩЕНИЕ на выполнение отметок!");
                     setImageOff();
                 } else {
@@ -565,20 +569,21 @@ public class MainController {
 
     void setImageOffError(){
         OnOffImage.setImage(new Image("images/switch-off-red-48.png"));
-        OnOffImage.setDisable(true);
-        OnState = false;
+        //OnOffImage.setDisable(true);
+        OnOffImage.setDisable(false); // В случае ошибки перезапускает соединение с БД.
+        controlButton = false;
     }
 
     void setImageOff(){
         OnOffImage.setImage(new Image("images/switch-off-gray-48.png"));
         OnOffImage.setDisable(false);
-        OnState = false;
+        controlButton = false;
     }
 
     void setImageOn(){
         OnOffImage.setImage(new Image("images/switch-on-green-48.png"));
         OnOffImage.setDisable(false);
-        OnState = true;
+        controlButton = true;
     }
 
     private static boolean oddTick = false;

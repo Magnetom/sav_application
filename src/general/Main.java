@@ -2,6 +2,7 @@ package general;
 
 import bebug.Log;
 import broadcast.Broadcast;
+import broadcast.OnDbConnectionChanged;
 import db.Db;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -36,7 +37,10 @@ public class Main extends Application {
 
     private boolean manualSampleTrigger;
 
-    private boolean startupOk;
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage primaryStage) throws Exception{
@@ -46,6 +50,21 @@ public class Main extends Application {
         // Загрузка локальных настоек в кеш настроек.
         initLocalSettings();
 
+        // Инициализация GUI.
+        initGUI (primaryStage);
+
+        // Инициализируем слушатаелей сообщений от различных модулей.
+        setupBroadcastListeners();
+
+        // Инициализируем основные сервисы.
+        setupServices();
+
+        // Инициализируем базу данных и удаленное подключение к ней.
+        dbInit();
+    }
+
+    // Инициализация графического интерфейса пользователя.
+    private void initGUI (Stage primaryStage) throws Exception{
         // Инициализируем графику.
         //Parent root = FXMLLoader.load(getClass().getResource("main.fxml"));
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
@@ -53,21 +72,11 @@ public class Main extends Application {
         mainController = loader.getController();
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
-        //primaryStage.setTitle("SAV v1.0 - the System of Accounting of Vehicles");
         primaryStage.setTitle("\"АУРА\" v"+ SW_VERSION_S +" - система Автоматизированного Учета Рейсов Автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
         // Закрываем все дочерние окна, поражденные основным контроллером.
         primaryStage.setOnCloseRequest(event -> mainController.closeAllChildStages());
-
-        // Инициализируем подключение к БД {sav}.
-        startupOk = dbInit();
-        // Инициализация состояния основных элементов графического контроля и управления.
-        initControls(startupOk);
-        // Инициализируем сервисы.
-        setupServices();
-        // Инициализируем слушатаелей сообщений от различных модулей.
-        setupBroadcastListeners();
     }
 
     private void initLocalSettings() {
@@ -76,7 +85,6 @@ public class Main extends Application {
 
     private void initVariables() {
         manualSampleTrigger = false;
-        startupOk = false;
     }
 
     private void setupBroadcastListeners() {
@@ -84,7 +92,7 @@ public class Main extends Application {
         // Были произведены изменения в настройках БД.
         Broadcast.setSettingsChangedInterface(() -> {
             // Загружаем все настройки с сервера БД и визуализируем их заново.
-            initControls(true);
+            initDbControls();
             Log.println("Набор переменных на сервере изменен вручную.");
         });
 
@@ -93,15 +101,17 @@ public class Main extends Application {
             manualSampleTrigger = true;
             Log.println("Набор данных на сервере изменен вручную.");
         });
+
+        // Требование перезапустить соединение с БД (от кнопку управления глобальным разрешением/запрещением отметок).
+        Broadcast.setDbReconnectionRequest(() -> {
+            Log.println("Выполняется ручное переподключение к серверу БД ...");
+            if (db!=null) db.connect();
+        });
     }
 
-    private void initControls(boolean setupOk) {
-
-        // Если предыдущие инициализации провалились.
-        if (!setupOk){
-            mainController.setImageOffError();
-            return;
-        }
+    // Инициализация элементов контроля и управления.
+    private void initDbControls() {
+        Log.println("Инициализация элементов контроля и управления.");
 
         /* Кнопка глобального Запрещения/Разрешения отметок. */
         // Проверяется наличие системной переменной global_blocked в БД.
@@ -109,30 +119,60 @@ public class Main extends Application {
         // Если она отсутствует, то считаем, что эта переменная включена.
         // Если ее значение "1", то это также означает, что переменная включена.
         if (val == null || val.toString().equals("1")){
-            mainController.setImageOff();
+            // Так как эта функция может быть вызвана из другого потока, а нам необходимо гарантированно запустить
+            // изменение графических элементов из потока GUI, то делаем таким образом:
+            Platform.runLater(() -> mainController.setImageOff());
         } else {
-            mainController.setImageOn();
+            Platform.runLater(() -> mainController.setImageOn());
         }
 
         /* Отображение текущего интервала между отметками. */
         val = db.getSysVariable(Db.TABLE_VARIABLES_ROWS.SYS_VAR_MARK_DELAY);
         if (val == null || val.toString().equals("0")){
-            mainController.setMarkDelayView("15*");
+            Platform.runLater(() -> mainController.setMarkDelayView("15*"));
         } else {
-            mainController.setMarkDelayView(val.toString());
+            Object finalVal = val;
+            Platform.runLater(() -> mainController.setMarkDelayView(finalVal.toString()));
         }
 
-        Log.println("Набор переменных был загружен с сервера.");
+        // Запуск потока опроса значения набора данных БД.
+        if(!dbPollService.isRunning()) dbPollService.start();
     }
 
-    private boolean dbInit() {
+    // Перевод всех элементов в неативное состояние (в случае разрыва связи с БД).
+    private void disableDbControls (){
+        Log.println("Деактивация элементов контроля и управления.");
+
+        Platform.runLater(() -> mainController.setImageOffError());
+        Platform.runLater(() -> mainController.setMarkDelayView("15*"));
+
+        // Остановка потока опроса значения набора данных БД.
+        if(dbPollService.isRunning()) dbPollService.cancel();
+    }
+
+    private void dbInit() {
+        // Получаем/создаем экземпляр класса для работы с БД.
         db = Db.getInstance();
-        if (db != null) return db.isConnected();
-        return false;
-    }
 
-    public static void main(String[] args) {
-        launch(args);
+        // Устанавливаем слушателя на изменения состояния в работе с удаленной БД.
+        db.setOnDbConnectionChangedListener(new OnDbConnectionChanged() {
+
+            @Override
+            public void onConnect() {
+                initDbControls();
+            }
+
+            @Override
+            public void onDisconnect(boolean failFlag) {
+                if (failFlag){
+                    Log.println("Обнаружены неполадки в подключении к серверу БД! Все сервисы приостановлены.");
+                }
+                disableDbControls();
+            }
+        });
+
+        // Подсоединяемся к БД.
+        db.connect();
     }
 
     // Настройка сервисов.
@@ -160,68 +200,67 @@ public class Main extends Application {
         //**********************************************************************************************************/
         /* Основной сервис. Делает периодические опросы БД. Инициирует вывод полученных данных в визуальные формы. */
         //**********************************************************************************************************/
-        if (startupOk){
-            dbPollService = new ScheduledService() {
-                @Override
-                protected Task createTask() {
-                    return new Task<Void>() {
 
-                        @Override protected Void call() {
+        dbPollService = new ScheduledService() {
+            @Override
+            protected Task createTask() {
+                return new Task<Void>() {
 
-                            // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
-                            // не изменялись со времени последней выборки из БД.
-                            try {
-                                if (db.isDatasetModified() || manualSampleTrigger) {
-                                    manualSampleTrigger = false;
+                    @Override protected Void call() {
 
-                                    // Получаем список всех отметок за сегодняшнюю дату.
-                                    final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
-                                    // Обновляем GUI элемент из основного потока GUI.
-                                    Platform.runLater(() -> mainController.printMarksLog(markList));
+                        // Проверяем, изменился ли набор данных на сервере, чтобы не загружать лишний раз данные, которые
+                        // не изменялись со времени последней выборки из БД.
+                        try {
+                            if (db.isDatasetModified() || manualSampleTrigger) {
+                                manualSampleTrigger = false;
 
-                                    // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                    final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
-                                    // Обновляем GUI элемент из основного потока GUI.
-                                    Platform.runLater(() -> mainController.printStatisticList(statList));
+                                // Получаем список всех отметок за сегодняшнюю дату.
+                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.printMarksLog(markList));
 
-                                    // Получаем список всех зарегистрированных ТС.
-                                    final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
-                                    // Обновляем GUI элемент из основного потока GUI.
-                                    Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
+                                // Получаем статистику по всем ТС за сегодняшнюю дату.
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.printStatisticList(statList));
 
-                                    Log.println("Список изменений в наборе данных успешно загружен.");
-                                }
-                            } catch (SQLException e){
-                                e.printStackTrace();
-                                Log.printerror(Db.TAG_SQL, "MAIN_THREAD",e.getMessage(), null);
+                                // Получаем список всех зарегистрированных ТС.
+                                final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
+                                // Обновляем GUI элемент из основного потока GUI.
+                                Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
+
+                                Log.println("Список изменений в наборе данных успешно загружен.");
                             }
-
-                            return null;
+                        } catch (SQLException e){
+                            e.printStackTrace();
+                            Log.printerror(Db.TAG_SQL, "MAIN_THREAD",e.getMessage(), null);
                         }
 
-                        @Override protected void succeeded() {
-                            super.succeeded();
-                            //Log.println("Запрос в базу данных выполнен.");
-                        }
+                        return null;
+                    }
 
-                        @Override protected void cancelled() {
-                            super.cancelled();
-                            Log.println("Поток опроса базы данных приостановлен!");
-                        }
+                    @Override protected void succeeded() {
+                        super.succeeded();
+                        //Log.println("Запрос в базу данных выполнен.");
+                    }
 
-                        @Override protected void failed() {
-                            super.failed();
-                            //dbPollService.cancel();
-                            dbPollService.restart();
-                            Log.println("Поток опроса базы данных завершился с ошибкой!");
-                        }
-                    };
-                }
-            };
-            //dbPollService.setDelay(new Duration(500));  // Задержка перед стартом.
-            dbPollService.setPeriod(new Duration(1000)); // Период повторения.
-            dbPollService.start();
-        }
+                    @Override protected void cancelled() {
+                        super.cancelled();
+                        Log.println("Поток опроса базы данных приостановлен!");
+                    }
 
+                    @Override protected void failed() {
+                        super.failed();
+                        //dbPollService.cancel();
+                        //dbPollService.restart();
+                        Log.println("Поток опроса базы данных завершился с ошибкой!");
+                    }
+                };
+            }
+        };
+        //dbPollService.setDelay(new Duration(500));  // Задержка перед стартом.
+        dbPollService.setPeriod(new Duration(1000)); // Период повторения.
+        // Если инициализация прошла успешно, тогда запускаем сервис опроса БД.
+        //dbPollService.start();
     }
 }

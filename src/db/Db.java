@@ -1,6 +1,7 @@
 package db;
 
 import bebug.Log;
+import broadcast.OnDbConnectionChanged;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import marks.VehicleItem;
@@ -39,10 +40,10 @@ public class Db {
     // Таблица TABLE_MARKS_COLUMNS содержит информацию о всех отметках.
     public static final class TABLE_MARKS_COLUMNS {
         public static final String COLUMN_ID         = "id";
-        public static final String COLUMN_VEHICLE    = "vehicle_id";
+        public static final String COLUMN_VEHICLE    = "vehicle";
         public static final String COLUMN_TIMESTAMP  = "time";
         public static final String COLUMN_MAC        = "mac";
-        public static final String COLUMN_REQUEST    = "request_id";
+        public static final String COLUMN_REQUEST    = "request";
         public static final String COLUMN_COMMENT    = "comment";
 
         public static final int ID_COLUMN_ID         = 0;
@@ -103,6 +104,8 @@ public class Db {
 
     private static Db instance = null;
 
+    private OnDbConnectionChanged onDbConnectionChanged = null;
+
     // Хэш код текущего набора данных, загруженного в визуальные компоненты.
     private String currDatasetHash = null;
 
@@ -129,13 +132,16 @@ public class Db {
             return;
         }
         // Подключаемся к БД сразу после создания экземпляра класса.
-        if (!connect()) disconnect();
+        //if (!connect()) disconnect();
      }
 
     // Подключиться к предопределенной базе данных.
-    private boolean connect(){
-        // Если соединение уже было установленно ранее, закрываем старое соединение.
-        if (conn != null) disconnect();
+    public boolean connect(){
+        Log.println("Попытка установить подключение к базе данных ...");
+        if (conn != null) {
+            Log.println("Соединение с базой данных уже установлено ранее. Переподключение не требуется.");
+            return true;
+        }
         try
         {
             // Данные для утсановки связи с MySQL сервером.
@@ -144,7 +150,7 @@ public class Db {
             String password   = "mysqladmin";
             String url = "jdbc:MySQL://"+serverName;
             conn = DriverManager.getConnection (url, userName, password);
-            Log.println("Соединение с базой данных установлено.");
+            Log.println("Соединение с базой данных успешно установлено.");
 
             ///////////////////////////////////////////////
             // Пытаемся проверить метаданны базы данных {aura}. Метеданные не верны и не могут быть созданы - считаем,
@@ -155,27 +161,37 @@ public class Db {
         catch (Exception ex)
         {
             conn = null;
-            Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных!", ex.getLocalizedMessage());
+            Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":3306", ex.getLocalizedMessage());
             ex.printStackTrace();
+            if (onDbConnectionChanged != null) onDbConnectionChanged.onDisconnect(true);
             return false;
         }
+        if (onDbConnectionChanged != null) onDbConnectionChanged.onConnect();
         return true;
     }
 
     public Boolean isConnected() {return conn!=null;}
 
     public Boolean reConnect(){
-        Log.println("Попытка заново подключиться к базе данных.");
+        Log.println("Попытка установить новое подключение к базе данных.");
+        // Если соединение уже было установленно ранее, закрываем старое соединение.
+        if (conn != null) disconnect();
         return connect();
+    }
+
+    public Boolean OnFailReConnect(){
+        Log.println("При обращении к базе данных произошла ошибка. Будет произведена попытка восстановить связь.");
+        return reConnect();
     }
 
     // Отключиться от базы данных.
     private void disconnect(){
+        Log.println("Происходит разрыв текущего соединения с базой данных ...");
         if (conn != null) {
             try {
                 conn.close ();
                 conn = null;
-                Log.println("Связь с базой данных разорвана.");
+                Log.println("Связь с базой данных успешно разорвана.");
             }
             catch (Exception ex) {
                 Log.printerror(TAG_SQL, "DISCONNECT","Отключение от базы данных произошло с ошибкой!", ex.getLocalizedMessage());
@@ -187,6 +203,10 @@ public class Db {
     protected void finalize() throws Throwable {
         super.finalize();
         disconnect();
+    }
+
+    public void setOnDbConnectionChangedListener(OnDbConnectionChanged listener){
+        onDbConnectionChanged = listener;
     }
 
     // Очистить БД полность.
@@ -208,7 +228,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VARIABLES",e.getMessage(), query);
             return false;
         }
@@ -222,7 +242,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VEHICLES",e.getMessage(), query);
             return false;
         }
@@ -237,7 +257,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "RESET_ALL_POPULARITY",e.getMessage(), query);
             return false;
         }
@@ -250,9 +270,9 @@ public class Db {
      * @timestamp - метка времени, которая будет присвоена отметке. Если в качестве этого параметра
      *              передано NULL (или пустая строка), то отметка выполняется с текущей меткой времени.
      */
-    public Boolean addMark(@NotNull  String vehicle,
-                           @Nullable String timestamp,
-                           @Nullable String comment){
+    Boolean addMark(@NotNull String vehicle,
+                    @Nullable String timestamp,
+                    @Nullable String comment){
 
         if (vehicle==null || vehicle.isEmpty()) return false;
 
@@ -274,7 +294,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "ADD_MARK",e.getMessage(), query);
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             return false;
         }
 
@@ -311,7 +331,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_MARKS",e.getMessage(), query);
             return false;
         }
@@ -328,7 +348,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
             return false;
         }
@@ -353,7 +373,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" WHERE DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW());");
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -379,7 +399,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES);
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -404,7 +424,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+" WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+"='1'");
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -431,7 +451,7 @@ public class Db {
         try {
             blackList = getBlockedVehicles();
         } catch (SQLException e){
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -495,7 +515,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "SET_SYS_VARIABLE",e.getMessage(), query);
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             return false;
         }
         return true;
@@ -518,7 +538,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "GET_SYS_VARIABLE",e.getMessage(), query);
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             return null;
         }
     }
@@ -545,7 +565,7 @@ public class Db {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            reConnect(); // Пытаемся переконнектиться.
+            OnFailReConnect(); // Пытаемся переконнектиться.
             return false;
         }
         return false;
