@@ -25,10 +25,11 @@ import java.sql.SQLException;
 
 public class Main extends Application {
 
-    public static int SW_RELEASE  = 1;
-    public static int SW_VERSION  = 5;
-    public static int SW_REVISION = 2;
-    public static final String SW_VERSION_S = SW_RELEASE + "." + Auxiliary.alignTwo(SW_VERSION) + "." + Auxiliary.alignTwo(SW_REVISION);
+    public static int SW_STAGE     = 1; // Стадия/этап.
+    public static int SW_BUILD     = 6; // Сборка.
+    public static int SW_REVISION  = 2; // Ревизия.
+    // Текущая версия программного обеспечения.
+    public static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 
     private static MainController mainController;
 
@@ -36,7 +37,6 @@ public class Main extends Application {
     private ScheduledService dbPollService; // Сервис опроса БД.
 
     private boolean manualSampleTrigger;
-
 
     public static void main(String[] args) {
         launch(args);
