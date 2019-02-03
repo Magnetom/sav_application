@@ -652,7 +652,15 @@ public class MainController {
                             Broadcast.getAccountInterface().wasChanged(Users.ADMIN);
                         }
                     });
-
+                    // Событие при исчезновении окна. Наступает после закрытия.
+                    setupStage.setOnHidden(event23 -> {
+                        Log.println("Инженерное меню -> закрыто.");
+                        // Изменяет текущий аккаунт на "USER".
+                        if (Broadcast.getAccountInterface() != null){
+                            Broadcast.getAccountInterface().wasChanged(Users.USER);
+                        }
+                    });
+                    /*
                     // Событие при закрытии окна.
                     setupStage.setOnCloseRequest(event22 -> {
                         Log.println("Инженерное меню -> закрыто.");
@@ -661,7 +669,7 @@ public class MainController {
                             Broadcast.getAccountInterface().wasChanged(Users.USER);
                         }
                     });
-
+                    */
                     setupStage.show();
 
                 } catch (IOException e) {
