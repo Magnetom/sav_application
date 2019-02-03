@@ -136,52 +136,52 @@ public class Db {
      }
 
     // Подключиться к предопределенной базе данных.
-    public boolean connect(){
+    public void connect(){
         Log.println("Попытка установить подключение к базе данных ...");
         if (conn != null) {
             Log.println("Соединение с базой данных уже установлено ранее. Переподключение не требуется.");
-            return true;
+            return;
         }
-        try
-        {
-            // Данные для утсановки связи с MySQL сервером.
-            String serverName = CachedSettings.SERVER_ADDRESS;
-            String userName   = "admin";
-            String password   = "mysqladmin";
-            String url = "jdbc:MySQL://"+serverName;
-            conn = DriverManager.getConnection (url, userName, password);
-            Log.println("Соединение с базой данных успешно установлено.");
+        new Thread(() -> {
+            try {
+                // Данные для утсановки связи с MySQL сервером.
+                String serverName = CachedSettings.SERVER_ADDRESS;
+                String userName = "admin";
+                String password = "mysqladmin";
+                String url = "jdbc:MySQL://" + serverName;
+                conn = DriverManager.getConnection(url, userName, password);
+                Log.println("Соединение с базой данных успешно установлено.");
 
-            ///////////////////////////////////////////////
-            // Пытаемся проверить метаданны базы данных {aura}. Метеданные не верны и не могут быть созданы - считаем,
-            // что дальнейшая работа с сервером БД невозможна.
-            if (!checkMetadata()) return false;
-            ///////////////////////////////////////////////
-        }
-        catch (Exception ex)
-        {
-            conn = null;
-            Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":3306", ex.getLocalizedMessage());
-            ex.printStackTrace();
-            if (onDbConnectionChanged != null) onDbConnectionChanged.onDisconnect(true);
-            return false;
-        }
-        if (onDbConnectionChanged != null) onDbConnectionChanged.onConnect();
-        return true;
+                ///////////////////////////////////////////////
+                // Пытаемся проверить метаданны базы данных {aura}. Метеданные не верны и не могут быть созданы - считаем,
+                // что дальнейшая работа с сервером БД невозможна.
+                if (!checkMetadata()) return;
+                ///////////////////////////////////////////////
+            }
+            catch (Exception ex)
+            {
+                conn = null;
+                Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":3306", ex.getLocalizedMessage());
+                ex.printStackTrace();
+                if (onDbConnectionChanged != null) onDbConnectionChanged.onDisconnect(true);
+                return;
+            }
+            if (onDbConnectionChanged != null) onDbConnectionChanged.onConnect();
+        }).start();
     }
 
     public Boolean isConnected() {return conn!=null;}
 
-    public Boolean reConnect(){
+    public void reConnect(){
         Log.println("Попытка установить новое подключение к базе данных.");
         // Если соединение уже было установленно ранее, закрываем старое соединение.
         if (conn != null) disconnect();
-        return connect();
+        connect();
     }
 
-    public Boolean OnFailReConnect(){
+    public void OnFailReConnect(){
         Log.println("При обращении к базе данных произошла ошибка. Будет произведена попытка восстановить связь.");
-        return reConnect();
+        reConnect();
     }
 
     // Отключиться от базы данных.
