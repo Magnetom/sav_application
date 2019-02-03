@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static utils.DateTime.getHHMMFromStringTimestamp;
+import static utils.Encrypt.decode;
 
 public class Db {
 
@@ -146,8 +147,8 @@ public class Db {
             try {
                 // Данные для утсановки связи с MySQL сервером.
                 String serverName = CachedSettings.SERVER_ADDRESS;
-                String userName = "admin";
-                String password = "mysqladmin";
+                String userName = decode("595752746157343D");
+                String password = decode("62586C7A635778685A47317062673D3D");
                 String url = "jdbc:MySQL://" + serverName;
                 conn = DriverManager.getConnection(url, userName, password);
                 Log.println("Соединение с базой данных успешно установлено.");
