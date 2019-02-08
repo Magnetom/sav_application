@@ -27,7 +27,7 @@ public class Main extends Application {
 
     public static int SW_STAGE     = 1; // Стадия/этап.
     public static int SW_BUILD     = 6; // Сборка.
-    public static int SW_REVISION  = 2; // Ревизия.
+    public static int SW_REVISION  = 7; // Ревизия.
     // Текущая версия программного обеспечения.
     public static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 

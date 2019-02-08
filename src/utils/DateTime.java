@@ -1,6 +1,10 @@
 package utils;
 
+import javafx.util.StringConverter;
+
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Locale;
 
@@ -43,7 +47,7 @@ public class DateTime {
     }
 
     public static String getTimeFromStringTimestamp (String strTimestamp){
-        String[] a = strTimestamp.toString().split(" ");
+        String[] a = strTimestamp.split(" ");
         return a[1];
     }
 
@@ -53,7 +57,7 @@ public class DateTime {
 
     public static String getHHMMFromStringTimestamp (String strTimestamp){
         String tmp = getTimeFromStringTimestamp(strTimestamp);
-        String[] a = tmp.toString().split(":");
+        String[] a = tmp.split(":");
         return a[0]+":"+a[1];
     }
 
@@ -80,4 +84,28 @@ public class DateTime {
         return getFormattedDataTime(System.currentTimeMillis(), format);
     }
 
+
+    public static StringConverter<LocalDate> getLocalDateConverter (){
+        return new StringConverter<LocalDate>() {
+            DateTimeFormatter dateFormatter =
+                    DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT);
+
+            @Override
+            public String toString(LocalDate date) {
+                if (date != null) {
+                    return dateFormatter.format(date);
+                } else {
+                    return "";
+                }
+            }
+            @Override
+            public LocalDate fromString(String string) {
+                if (string != null && !string.isEmpty()) {
+                    return LocalDate.parse(string, dateFormatter);
+                } else {
+                    return null;
+                }
+            }
+        };
+    }
 }

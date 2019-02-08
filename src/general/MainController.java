@@ -37,6 +37,8 @@ import marks.VehicleItem;
 import marks.VehicleMark;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 import static utils.DateTime.*;
@@ -50,11 +52,15 @@ public class MainController {
     public TableView allDbVehiclesList;
     public ImageView OnOffImage;
 
-    // Цифровые часы
+    // Цифровые часы и выбор дат.
     public Label clockHour;
     public Label clockColon;
     public Label clockMinutes;
-    public Label clockDate;
+    public Label clockDateStart;
+    public Label clockDateStop;
+    public ImageView resetDateButton;
+    public DatePicker datepicker_hidden_start;
+    public DatePicker datepicker_hidden_stop;
 
     // Отображение текущей настройки времянного интервала.
     public Label markDelay;
@@ -442,6 +448,8 @@ public class MainController {
 
         setupAccountVisualStyle();
 
+        setupDatePickers();
+
         OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             boolean result = false;
 
@@ -592,7 +600,7 @@ public class MainController {
         clockHour.setText(getTimeKK());   // Устанавливаем часы.
         clockMinutes.setText(getTimeMM());// Устанавливаем минуты.
 
-        clockDate.setText(getTimeDDMMYYYY()); // Устанавливаем текущую дату.
+        //clockDateStart.setText(getTimeDDMMYYYY()); // Устанавливаем текущую дату.
 
         // Манипулируем знаком "двоеточее".
         if (oddTick) clockColon.setStyle("-fx-text-fill: #646464; -fx-font-size: 20.0");
@@ -601,6 +609,97 @@ public class MainController {
 
         oddTick = !oddTick;
     }
+
+
+    private Image entered = new Image("images/reset-date-brown.png");
+    private Image exited  = new Image("images/reset-date-grey.png");
+
+    private void setupDatePickers(){
+        // Сбросить все даты.
+        resetDatePickers();
+
+        // Настройка скрытых датапикеров
+        datepicker_hidden_start.setValue(LocalDate.parse(clockDateStart.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
+        datepicker_hidden_stop.setValue(LocalDate.parse(clockDateStop.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
+
+        // Настройка видимых датапикеров.
+        clockDateStart.setOnMouseClicked(event -> {
+            // ToDo: Проверка взаимопересечения дат начала и конца
+            Callback<DatePicker, DateCell> dayCellFactory= this.getStartDayCellFactory();
+            datepicker_hidden_start.setDayCellFactory(dayCellFactory);
+            // Применение даты.
+            datepicker_hidden_start.setOnAction(event1 -> clockDateStart.setText(datepicker_hidden_start.getValue().format(DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT))));
+            datepicker_hidden_start.show();
+        });
+        clockDateStop.setOnMouseClicked(event -> {
+            // ToDo: Проверка взаимопересечения дат начала и конца
+            Callback<DatePicker, DateCell> dayCellFactory= this.getStopDayCellFactory();
+            datepicker_hidden_stop.setDayCellFactory(dayCellFactory);
+            // Применение даты.
+            datepicker_hidden_stop.setOnAction(event1 -> clockDateStop.setText(datepicker_hidden_stop.getValue().format(DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT))));
+            datepicker_hidden_stop.show();
+        });
+
+        // Кнопка "Сбросить даты и установить везде текущую".
+        resetDateButton.setOnMouseEntered(event -> resetDateButton.setImage(entered));// Картинка при наведении курсора.
+        resetDateButton.setOnMouseExited (event -> resetDateButton.setImage(exited)); // Картинка при уходе курсора.
+        // Слушатель нажатия кнопки
+        resetDateButton.setOnMouseClicked(event -> {
+            /* Сбросить даты */
+            resetDatePickers();
+        });
+    }
+
+    // Сбросить все даты на текущую.
+    private void resetDatePickers() {
+        // Устанавливаем текущую дату для видимых датапикеров (Label).
+        clockDateStart.setText(getTimeDDMMYYYY());
+        clockDateStop.setText(getTimeDDMMYYYY());
+        // Устанавливаем текущую дату для скрытых датапикеров (DatePicker).
+        datepicker_hidden_start.setValue(LocalDate.parse(clockDateStart.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
+        datepicker_hidden_stop.setValue(LocalDate.parse(clockDateStop.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
+    }
+
+    // Factory to create Cell of DatePicker
+    private Callback<DatePicker, DateCell> getStartDayCellFactory() {
+        final Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
+            @Override
+            public DateCell call(final DatePicker datePicker) {
+                return new DateCell() {
+                    @Override
+                    public void updateItem(LocalDate item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if ( item.compareTo(datepicker_hidden_stop.getValue()) > 0 ){
+                            setDisable(true);
+                            setStyle("-fx-background-color: #ffc0cb;");
+                        }
+                    }
+                };
+            }
+        };
+        return dayCellFactory;
+    }
+
+    // Factory to create Cell of DatePicker
+    private Callback<DatePicker, DateCell> getStopDayCellFactory() {
+        final Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
+            @Override
+            public DateCell call(final DatePicker datePicker) {
+                return new DateCell() {
+                    @Override
+                    public void updateItem(LocalDate item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if ( item.compareTo(datepicker_hidden_start.getValue()) < 0 ){
+                            setDisable(true);
+                            setStyle("-fx-background-color: #ffc0cb;");
+                        }
+                    }
+                };
+            }
+        };
+        return dayCellFactory;
+    }
+
 
     void setMarkDelayView(String value){
         markDelay.setText(value);

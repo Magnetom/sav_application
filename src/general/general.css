@@ -1,0 +1,7 @@
+.datepicker{
+    -fx-font-weight: normal;
+ }
+
+.datepicker:hover{
+    -fx-text-fill: brown;
+}

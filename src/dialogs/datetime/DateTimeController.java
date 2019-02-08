@@ -4,7 +4,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 import javafx.util.converter.DateTimeStringConverter;
 import utils.Auxiliary;
 import utils.DateTime;
@@ -12,7 +11,8 @@ import utils.DateTime;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+
+import static utils.DateTime.getLocalDateConverter;
 
 public class DateTimeController {
 
@@ -41,28 +41,7 @@ public class DateTimeController {
         // Настройка поля ДАТА //
         /////////////////////////
         dateField.setValue(LocalDate.now());
-        StringConverter<LocalDate> converter = new StringConverter<LocalDate>() {
-            DateTimeFormatter dateFormatter =
-                    DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-            @Override
-            public String toString(LocalDate date) {
-                if (date != null) {
-                    return dateFormatter.format(date);
-                } else {
-                    return "";
-                }
-            }
-            @Override
-            public LocalDate fromString(String string) {
-                if (string != null && !string.isEmpty()) {
-                    return LocalDate.parse(string, dateFormatter);
-                } else {
-                    return null;
-                }
-            }
-        };
-        dateField.setConverter(converter);
+        dateField.setConverter(getLocalDateConverter());
         dateField.setPromptText("dd-MM-yyyy");
 
         //////////////////////////
