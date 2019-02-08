@@ -4,7 +4,6 @@ import javafx.util.StringConverter;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Locale;
 
@@ -85,10 +84,20 @@ public class DateTime {
     }
 
 
-    public static StringConverter<LocalDate> getLocalDateConverter (){
-        return new StringConverter<LocalDate>() {
-            DateTimeFormatter dateFormatter =
-                    DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT);
+    // Конвертер даты в строку для визуальных элементов.
+    public static StringConverter<LocalDate> getVisualDateConverter(){
+        return getLocalDateConverter (DDMMYYYY_DATA_FORMAT);
+    }
+
+    // Конвертер даты в строку в формате TIMESTAMP для sql-запросов и пр.
+    public static StringConverter<LocalDate> getDbDateConverter(){
+        return getLocalDateConverter (YYYYMMDD_DATA_FORMAT);
+    }
+
+    private static StringConverter<LocalDate> getLocalDateConverter(String pattern) {
+        if (pattern == null) pattern = DDMMYYYY_DATA_FORMAT;
+
+        return new DateConverter<LocalDate>(pattern) {
 
             @Override
             public String toString(LocalDate date) {

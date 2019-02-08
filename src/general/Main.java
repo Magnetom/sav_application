@@ -4,6 +4,7 @@ import bebug.Log;
 import broadcast.Broadcast;
 import broadcast.OnDbConnectionChanged;
 import db.Db;
+import db.DbDateRange;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -214,13 +215,15 @@ public class Main extends Application {
                             if (db.isDatasetModified() || manualSampleTrigger) {
                                 manualSampleTrigger = false;
 
+                                final DbDateRange dateRange = mainController.getUserSelectedDateRange();
+
                                 // Получаем список всех отметок за сегодняшнюю дату.
-                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList());
+                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(markList));
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
 

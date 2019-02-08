@@ -12,7 +12,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 
-import static utils.DateTime.getLocalDateConverter;
+import static utils.DateTime.getVisualDateConverter;
 
 public class DateTimeController {
 
@@ -41,7 +41,7 @@ public class DateTimeController {
         // Настройка поля ДАТА //
         /////////////////////////
         dateField.setValue(LocalDate.now());
-        dateField.setConverter(getLocalDateConverter());
+        dateField.setConverter(getVisualDateConverter());
         dateField.setPromptText("dd-MM-yyyy");
 
         //////////////////////////

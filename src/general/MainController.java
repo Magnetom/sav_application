@@ -4,6 +4,7 @@ import bebug.Log;
 import bebug.LogInterface;
 import broadcast.Broadcast;
 import db.Db;
+import db.DbDateRange;
 import db.DbProc;
 import dialogs.datetime.DateTimeDialog;
 import enums.Users;
@@ -35,10 +36,10 @@ import javafx.util.Callback;
 import marks.Statuses;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import utils.DateTime;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 import static utils.DateTime.*;
@@ -433,8 +434,8 @@ public class MainController {
             // Применяем новый статус к единице данных.
             vehicle.setBlocked(newStatus == Statuses.BLOCKED);
 
-            // Сообщаем верхнему уровню об изменении набора данных.
-            Broadcast.getDatasetInterface().wasChanged();
+            // Сообщаем верхнему уровню об изменении набора данных или изменении параметров выборки.
+            requestAllDatasetReload();
         });
     }
 
@@ -486,6 +487,12 @@ public class MainController {
             currentUserType = newUser;
             setupAccountVisualStyle();
         });
+    }
+
+    // Запрос о перезагрузке/актуализации всех визуальных данных.
+    private void requestAllDatasetReload(){
+        // Сообщаем верхнему уровню об изменении набора данных или изменении параметров выборки.
+        if (Broadcast.getDatasetInterface() != null) Broadcast.getDatasetInterface().wasChanged();
     }
 
     // Установить визуальное оформление согласно текущему пользователю/аккаунту.
@@ -615,28 +622,31 @@ public class MainController {
     private Image exited  = new Image("images/reset-date-grey.png");
 
     private void setupDatePickers(){
+
         // Сбросить все даты.
         resetDatePickers();
 
-        // Настройка скрытых датапикеров
-        datepicker_hidden_start.setValue(LocalDate.parse(clockDateStart.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
-        datepicker_hidden_stop.setValue(LocalDate.parse(clockDateStop.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
-
         // Настройка видимых датапикеров.
         clockDateStart.setOnMouseClicked(event -> {
-            // ToDo: Проверка взаимопересечения дат начала и конца
+            //Проверка взаимопересечения дат начала и конца
             Callback<DatePicker, DateCell> dayCellFactory= this.getStartDayCellFactory();
             datepicker_hidden_start.setDayCellFactory(dayCellFactory);
             // Применение даты.
-            datepicker_hidden_start.setOnAction(event1 -> clockDateStart.setText(datepicker_hidden_start.getValue().format(DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT))));
+            datepicker_hidden_start.setOnAction(event1 -> {
+                clockDateStart.setText(DateTime.getVisualDateConverter().toString(datepicker_hidden_start.getValue()));
+                requestAllDatasetReload();
+            });
             datepicker_hidden_start.show();
         });
         clockDateStop.setOnMouseClicked(event -> {
-            // ToDo: Проверка взаимопересечения дат начала и конца
+            // Проверка взаимопересечения дат начала и конца
             Callback<DatePicker, DateCell> dayCellFactory= this.getStopDayCellFactory();
             datepicker_hidden_stop.setDayCellFactory(dayCellFactory);
             // Применение даты.
-            datepicker_hidden_stop.setOnAction(event1 -> clockDateStop.setText(datepicker_hidden_stop.getValue().format(DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT))));
+           datepicker_hidden_stop.setOnAction(event1 -> {
+                clockDateStop.setText(DateTime.getVisualDateConverter().toString(datepicker_hidden_stop.getValue()));
+                requestAllDatasetReload();
+            });
             datepicker_hidden_stop.show();
         });
 
@@ -653,11 +663,14 @@ public class MainController {
     // Сбросить все даты на текущую.
     private void resetDatePickers() {
         // Устанавливаем текущую дату для видимых датапикеров (Label).
-        clockDateStart.setText(getTimeDDMMYYYY());
-        clockDateStop.setText(getTimeDDMMYYYY());
+        String reset_value_1 = getTimeDDMMYYYY();
+        clockDateStart.setText(reset_value_1);
+        clockDateStop.setText(reset_value_1);
+
         // Устанавливаем текущую дату для скрытых датапикеров (DatePicker).
-        datepicker_hidden_start.setValue(LocalDate.parse(clockDateStart.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
-        datepicker_hidden_stop.setValue(LocalDate.parse(clockDateStop.getText(), DateTimeFormatter.ofPattern(DDMMYYYY_DATA_FORMAT)));
+        LocalDate reset_value_2 = DateTime.getDbDateConverter().fromString(getTimeYYYYMMDD());
+        datepicker_hidden_start.setValue(reset_value_2);
+        datepicker_hidden_stop.setValue(reset_value_2);
     }
 
     // Factory to create Cell of DatePicker
@@ -700,6 +713,12 @@ public class MainController {
         return dayCellFactory;
     }
 
+    public DbDateRange getUserSelectedDateRange (){
+        DbDateRange dbDateRange = new DbDateRange();
+        dbDateRange.setStartDate(datepicker_hidden_start.getValue());
+        dbDateRange.setStopDate(datepicker_hidden_stop.getValue());
+        return dbDateRange;
+    }
 
     void setMarkDelayView(String value){
         markDelay.setText(value);

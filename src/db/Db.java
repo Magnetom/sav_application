@@ -250,6 +250,24 @@ public class Db {
         return true;
     }
 
+    // Увеличить рейтинг на единицу.
+    public Boolean incrementPopularity(String vehicle){
+        if(!isConnected()) return false;
+
+        if (vehicle == null) return false;
+
+        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+" SET "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+"="+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+"+1 WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"';";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            OnFailReConnect(); // Пытаемся переконнектиться.
+            Log.printerror(TAG_SQL, "INCREMENT_POPULARITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
     // Очистить все рейтинги популярности.
     public Boolean resetPopularity(){
         if(!isConnected()) return false;
@@ -292,6 +310,10 @@ public class Db {
 
         try {
             conn.createStatement().executeUpdate(query);
+
+            // Если запрос выполнен удачно, то обновляем рейтинг популярности.
+            incrementPopularity(vehicle);
+
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "ADD_MARK",e.getMessage(), query);
@@ -366,13 +388,26 @@ public class Db {
         return setVehicleState(vehicle, false);
     }
 
-    // Возвращает список/лог отметок за текущий день.
-    public List<VehicleMark> getMarksRawList() throws SQLException {
+    // Возвращает список/лог отметок в диапазоне дат @dateRange.
+    // Если параметр @dateRange равен NULL, то выборка за текущую дату.
+    public List<VehicleMark> getMarksRawList(DbDateRange dateRange) throws SQLException {
         if(!isConnected()) return null;
+
+        String extra;
+        if (dateRange != null){
+            if (dateRange.isSingleDate()){
+                extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE('"+dateRange.getSingleDate()+"')";
+            } else {
+                extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")>=DATE('"+dateRange.getStartDate()+"') AND DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")<=DATE('"+dateRange.getStopDate()+"')";
+            }
+        } else {
+            extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
+        }
 
         ResultSet rs;
         try {
-            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" WHERE DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW());");
+            String query = "SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" WHERE "+extra+";";
+            rs = conn.createStatement().executeQuery(query);
         } catch (SQLException e){
             OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
@@ -441,11 +476,11 @@ public class Db {
     // Получить статистику по каждому ТС: [госномер]-[количество кругов]-[статус блокировки].
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
-    public List<VehicleItem> getVehiclesStatistic(@Nullable List<VehicleMark> markList) throws SQLException{
+    public List<VehicleItem> getVehiclesStatistic(DbDateRange dateRange, @Nullable List<VehicleMark> markList) throws SQLException{
 
         if(!isConnected()) return null;
         // Получаем (если это необходимо) лог отметок за текущий день.
-        if (markList == null) markList = getMarksRawList();
+        if (markList == null) markList = getMarksRawList(dateRange);
 
         // Получаем список заблокированных ТС.
         List<String> blackList;
