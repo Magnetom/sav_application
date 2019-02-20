@@ -5,15 +5,49 @@
 <?import javafx.scene.shape.Rectangle?>
 <AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="frames.SettingsController">
    <children>
-      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#fff2f2" height="288.0" layoutX="390.0" layoutY="15.0" stroke="#e87474" strokeType="INSIDE" width="157.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0" />
-      <Button fx:id="saveButton" layoutX="274.0" layoutY="188.0" mnemonicParsing="false" text="Применить" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="80.0" />
-      <Label layoutX="33.0" layoutY="23.0" text="Минимальное время круга (мин.)" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="10.0" />
-      <TextField fx:id="loopDelayText" layoutX="14.0" layoutY="27.0" prefHeight="25.0" prefWidth="185.0" AnchorPane.leftAnchor="10.0" />
-      <Button fx:id="closeButton" layoutX="534.0" layoutY="365.0" mnemonicParsing="false" text="Закрыть" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="10.0" />
-      <Button fx:id="clearTodayMarksButton" layoutX="451.0" layoutY="126.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить отметки (текущая дату)" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="18.0" AnchorPane.topAnchor="126.0" />
-      <Button fx:id="resetPopularityButton" layoutX="451.0" layoutY="252.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="131.0" text="Обнулить рейтинги" textFill="#ea9000" AnchorPane.rightAnchor="18.0" AnchorPane.topAnchor="252.0" />
-      <Button fx:id="clearAllMarksButton" layoutX="451.0" layoutY="72.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить отметки (за все даты)" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="18.0" AnchorPane.topAnchor="72.0" />
-      <Button fx:id="removeAllVehiclesButton" layoutX="451.0" layoutY="180.0" mnemonicParsing="false" prefHeight="64.0" prefWidth="131.0" text="Удалить все транспортные средства" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="18.0" AnchorPane.topAnchor="180.0" />
-      <Button fx:id="allDbRemoveButton" layoutX="451.0" layoutY="18.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить базу данных полностью!" textAlignment="CENTER" textFill="#d74646" wrapText="true" AnchorPane.rightAnchor="18.0" AnchorPane.topAnchor="18.0" />
+      <BorderPane layoutX="10.0" layoutY="68.0" prefWidth="421.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <center>
+            <TabPane prefWidth="421.0" stylesheets="@sample.css" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+              <tabs>
+                <Tab text="Уставки">
+                  <content>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <TextField fx:id="loopDelayText" layoutX="8.0" layoutY="23.0" prefHeight="25.0" prefWidth="185.0" AnchorPane.leftAnchor="8.0" />
+                              <Label layoutX="8.0" layoutY="4.0" text="Минимальное время круга (мин.)" AnchorPane.leftAnchor="8.0" AnchorPane.topAnchor="4.0" />
+                              <Button fx:id="saveButton" mnemonicParsing="false" text="Применить" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="80.0" />
+                              <Button fx:id="closeButton" mnemonicParsing="false" text="Закрыть" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="10.0" />
+                           </children>
+                        </AnchorPane>
+                  </content>
+                </Tab>
+                 <Tab text="Управление">
+                    <content>
+                       <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                          <children>
+                             <Button fx:id="saveButton1" mnemonicParsing="false" text="Применить" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="80.0" />
+                             <Button fx:id="closeButton1" mnemonicParsing="false" text="Закрыть" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="10.0" />
+                             <Button id="runScriptButton" fx:id="runScriptButton" layoutX="14.0" layoutY="14.0" mnemonicParsing="false" text="Выполнить скрипт" />
+                          </children>
+                       </AnchorPane>
+                    </content>
+                 </Tab>
+                <Tab styleClass="tab-format" text="Форматирование">
+                  <content>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#fff2f2" height="288.0" layoutX="14.0" layoutY="14.0" stroke="#e87474" strokeType="INSIDE" width="157.0" AnchorPane.rightAnchor="429.0" AnchorPane.topAnchor="14.0" />
+                              <Button fx:id="clearTodayMarksButton" layoutX="27.0" layoutY="135.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить отметки (текущая дату)" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="442.0" AnchorPane.topAnchor="135.0" />
+                              <Button fx:id="resetPopularityButton" layoutX="27.0" layoutY="261.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="131.0" text="Обнулить рейтинги" textFill="#ea9000" AnchorPane.rightAnchor="442.0" AnchorPane.topAnchor="261.0" />
+                              <Button fx:id="clearAllMarksButton" layoutX="27.0" layoutY="81.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить отметки (за все даты)" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="442.0" AnchorPane.topAnchor="81.0" />
+                              <Button fx:id="removeAllVehiclesButton" layoutX="27.0" layoutY="189.0" mnemonicParsing="false" prefHeight="64.0" prefWidth="131.0" text="Удалить все транспортные средства" textAlignment="CENTER" textFill="#ea9000" wrapText="true" AnchorPane.rightAnchor="442.0" AnchorPane.topAnchor="189.0" />
+                              <Button fx:id="allDbRemoveButton" layoutX="27.0" layoutY="27.0" mnemonicParsing="false" prefHeight="46.0" prefWidth="131.0" text="Очистить базу данных полностью!" textAlignment="CENTER" textFill="#d74646" wrapText="true" AnchorPane.rightAnchor="442.0" AnchorPane.topAnchor="27.0" />
+                           </children></AnchorPane>
+                  </content>
+                </Tab>
+              </tabs>
+            </TabPane>
+         </center>
+      </BorderPane>
    </children>
 </AnchorPane>

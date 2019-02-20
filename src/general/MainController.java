@@ -9,6 +9,7 @@ import db.DbProc;
 import dialogs.datetime.DateTimeDialog;
 import enums.Users;
 import frames.SettingsController;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -67,6 +68,10 @@ public class MainController {
     public Label markDelay;
     public AnchorPane headerPane;
 
+    // Лог событий
+    private int unseenCount; // Количество непросмотренных сообщений.
+    public TitledPane logTitledPane; // Панель, на которой располагается лог событий.
+
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
 
@@ -90,23 +95,25 @@ public class MainController {
         currentUserType = Users.USER;
 
         filteredVehicles = new ArrayList<>();
+    }
 
-        // Инициализируем интерфейс для вывода отладочной информации.
-        Log.setInterface(new LogInterface() {
-            @Override
-            public void println(String mess) {
-                if (debugLogArea != null && (mess != null) ) debugLogArea.appendText(mess+"\r\n");
-            }
+    @FXML
+    public void initialize() {
+        refreshClocks();
 
-            @Override
-            public void print(String mess) {
-                if (debugLogArea != null && (mess != null)) debugLogArea.appendText(mess);
-            }
-        });
+        initAllGUIs();
+
+        setImageOff();
+
+        setupAccountVisualStyle();
+
+        setupDatePickers();
+
+        initListeners();
     }
 
     // Закрывает (если они все-еще открыты) все дочерние окна, поражденные этим контроллером.
-    public void closeAllChildStages(){
+    void closeAllChildStages(){
         // Закрываем инженерное меню, если оно все-еще открыто.
         if (setupStage!=null)setupStage.close();
     }
@@ -182,7 +189,7 @@ public class MainController {
 
             todayVehiclesMarksLog.getColumns().clear();
 
-            TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Время");
+            TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Дата/Время");
             TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
             TableColumn <VehicleMark, String> commentColumn   = new TableColumn<>("Комментарий");
 
@@ -191,7 +198,7 @@ public class MainController {
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
             commentColumn.setCellValueFactory(new PropertyValueFactory<>("comment"));
 
-            timestampColumn.setMinWidth(40);
+            timestampColumn.setMinWidth(125);
             vehicleColumn.setMinWidth(90);
 
             timestampColumn.setStyle("-fx-alignment: CENTER;");
@@ -214,12 +221,12 @@ public class MainController {
             allDbVehiclesList.setEditable(true);
 
             TableColumn <VehicleItem, String>   vehicleColumn    = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Рейсов");
+            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Всего рейсов");
             TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус");
 
             vehicleColumn.setMinWidth(90);
             statusColumn.setMinWidth(90);
-            popularityColumn.setMinWidth(30);
+            popularityColumn.setMinWidth(90);
 
             popularityColumn.setStyle("-fx-alignment: CENTER;");
             statusColumn.setStyle("-fx-alignment: CENTER;");
@@ -439,17 +446,7 @@ public class MainController {
         });
     }
 
-    @FXML
-    public void initialize() {
-        refreshClocks();
-
-        initAllGUIs();
-
-        setImageOff();
-
-        setupAccountVisualStyle();
-
-        setupDatePickers();
+    private void initListeners(){
 
         OnOffImage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             boolean result = false;
@@ -486,6 +483,42 @@ public class MainController {
         Broadcast.setAccountInterface(newUser -> {
             currentUserType = newUser;
             setupAccountVisualStyle();
+        });
+
+
+        // Инициализируем интерфейс для вывода отладочной информации.
+        Log.setInterface(new LogInterface() {
+
+            private void updateUnseenCount(){
+
+                if (!logTitledPane.isExpanded()){
+                    unseenCount++;
+                    Platform.runLater(() -> logTitledPane.setText("Лог событий (новых: "+ unseenCount +")"));
+                }
+            }
+
+            @Override
+            public void println(String mess) {
+                if (debugLogArea != null && (mess != null) ) {
+                    Platform.runLater(() -> debugLogArea.appendText(mess+"\r\n"));
+                    updateUnseenCount();
+                }
+            }
+
+            @Override
+            public void print(String mess) {
+                if (debugLogArea != null && (mess != null)) {
+                    Platform.runLater(() -> debugLogArea.appendText(mess));
+                    updateUnseenCount();
+                }
+            }
+        });
+        // Вешаем слушателя на сворачивание/разворачивание лога событий.
+        logTitledPane.setOnMouseClicked(event -> {
+            if (logTitledPane.isExpanded()){
+                unseenCount = 0;
+                logTitledPane.setText("Лог событий");
+            }
         });
     }
 
@@ -809,6 +842,40 @@ public class MainController {
         dialog.getDialogPane().setContent(grid);
 
         dialog.showAndWait();
+    }
+
+    public void onUserSetupAction (ActionEvent event) {
+
+        //////////////////////////////////////////////
+        // Запускаем окно пользовательских настроек //
+        //////////////////////////////////////////////
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/frames/user_settings.fxml"));
+
+        Parent root;
+        try {
+            root = loader.load();
+            setupStage = new Stage();
+            setupStage.getIcons().add(new Image("/images/user-settings-32.png"));
+            setupStage.setTitle("Пользовательские настройки");
+            setupStage.setScene(new Scene(root, -1, -1));
+
+            // Событие при открытии окна.
+            setupStage.setOnShown(event2 -> {
+                /* */
+            });
+            // Событие при исчезновении окна. Наступает после закрытия.
+            setupStage.setOnHidden(event23 -> {
+                /* */
+            });
+            setupStage.show();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.println("ОШИБКА! Подробнее:");
+            Log.println(e.toString());
+        }
+        /////////////////////////////////////////////////////////////////////////
     }
 
     void printAllVehicles(ObservableList<VehicleItem> list){

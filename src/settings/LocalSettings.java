@@ -63,6 +63,7 @@ public class LocalSettings {
     public static void reloadSettings(){
 
         CachedSettings.SERVER_ADDRESS = getXMLValueString("settings/network", "server_address", CachedSettings.DEFAULT_SERVER_ADDRES);
+        CachedSettings.SERVER_PORT    = getXMLValueString("settings/network", "server_port", CachedSettings.DEFAULT_SERVER_PORT);
 
     }
 }

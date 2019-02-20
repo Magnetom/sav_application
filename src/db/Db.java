@@ -4,6 +4,7 @@ import bebug.Log;
 import broadcast.OnDbConnectionChanged;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
+import frames.VehicleCapacityItem;
 import marks.VehicleItem;
 import marks.VehicleMark;
 import settings.CachedSettings;
@@ -16,7 +17,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static utils.DateTime.getHHMMFromStringTimestamp;
 import static utils.Encrypt.decode;
 
 public class Db {
@@ -37,6 +37,7 @@ public class Db {
     private static final String TABLE_MARKS      = "marks";     // Таблица отметок.
     private static final String TABLE_VEHICLES   = "vehicles";  // Таблица со списком ТС.
     private static final String TABLE_VARIABLES  = "variables"; // Таблица системных переменных.
+    private static final String TABLE_CAPACITY   = "capacity";  // Таблица вместимости транспортных средств.
 
     // Таблица TABLE_MARKS_COLUMNS содержит информацию о всех отметках.
     public static final class TABLE_MARKS_COLUMNS {
@@ -45,6 +46,7 @@ public class Db {
         public static final String COLUMN_TIMESTAMP  = "time";
         public static final String COLUMN_MAC        = "mac";
         public static final String COLUMN_REQUEST    = "request";
+        public static final String COLUMN_DELETED    = "deleted";
         public static final String COLUMN_COMMENT    = "comment";
 
         public static final int ID_COLUMN_ID         = 0;
@@ -52,7 +54,8 @@ public class Db {
         public static final int ID_COLUMN_TIMESTAMP  = 2;
         public static final int ID_COLUMN_MAC        = 3;
         public static final int ID_COLUMN_REQUEST    = 4;
-        public static final int ID_COLUMN_COMMENT    = 5;
+        public static final int ID_COLUMN_DELETED    = 5;
+        public static final int ID_COLUMN_COMMENT    = 6;
     }
 
     // Таблица TABLE_VEHICLES_COLUMNS содержит список введенных гос. номеров и их популярность.
@@ -61,11 +64,13 @@ public class Db {
         public static final String COLUMN_VEHICLE    = "vehicle";
         public static final String COLUMN_POPULARITY = "popularity";
         public static final String COLUMN_BLOCKED    = "blocked";
+        public static final String COLUMN_CAPACITY   = "capacity";
 
         public static final int ID_COLUMN_ID          = 0;
         public static final int ID_COLUMN_VEHICLE     = 1;
         public static final int ID_COLUMN_POPULARITY  = 2;
         public static final int ID_COLUMN_BLOCKED     = 3;
+        public static final int ID_COLUMN_CAPACITY    = 4;
     }
 
     // Таблица TABLE_VARIABLES_COLUMNS содержит список системных переменных.
@@ -88,6 +93,19 @@ public class Db {
         public static final String SYS_VAR_DB_VERSION       = "db_version";
         public static final String SYS_VAR_MARK_DELAY       = "mark_delay";
         public static final String SYS_VAR_GLOBAL_BLOCKED   = "global_blocked";
+    }
+
+    // Таблица TABLE_VEHICLES_COLUMNS содержит список введенных гос. номеров и их популярность.
+    public static final class TABLE_CAPACITY_COLUMNS {
+        public static final String COLUMN_ID         = "id";
+        public static final String COLUMN_TYPE       = "type";
+        public static final String COLUMN_CAPACITY   = "capacity";
+        public static final String COLUMN_COMMENT    = "comment";
+
+        public static final int ID_COLUMN_ID         = 0;
+        public static final int ID_COLUMN_TYPE       = 1;
+        public static final int ID_COLUMN_CAPACITY   = 2;
+        public static final int ID_COLUMN_COMMENT    = 3;
     }
 
     ////////////////////////////////////////////////////////
@@ -146,7 +164,7 @@ public class Db {
         new Thread(() -> {
             try {
                 // Данные для утсановки связи с MySQL сервером.
-                String serverName = CachedSettings.SERVER_ADDRESS;
+                String serverName = CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT;
                 String userName = decode("595752746157343D");
                 String password = decode("62586C7A635778685A47317062673D3D");
                 String url = "jdbc:MySQL://" + serverName;
@@ -162,7 +180,7 @@ public class Db {
             catch (Exception ex)
             {
                 conn = null;
-                Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":3306", ex.getLocalizedMessage());
+                Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT, ex.getLocalizedMessage());
                 ex.printStackTrace();
                 if (onDbConnectionChanged != null) onDbConnectionChanged.onDisconnect(true);
                 return;
@@ -216,10 +234,26 @@ public class Db {
         // Удаляются все ТС.
         result = removeAllVehicles();
         // Удаляются все отметки.
-        result &= removeMarks(null,"",null);
+        result &= removeMarks(null,"",null, false);
         // Удаляются все отметки.
         result &= removeAllVariables();
+        // Удаляются все грузовместимости.
+        result &= removeAllCapacity();
         return result;
+    }
+
+    // Удаляются все грузовместимости.
+    private Boolean removeAllCapacity() {
+        String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            OnFailReConnect(); // Пытаемся переконнектиться.
+            Log.printerror(TAG_SQL, "REMOVE_ALL_CAPACITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
     }
 
     // Удаляются все переменные.
@@ -289,12 +323,11 @@ public class Db {
      * @timestamp - метка времени, которая будет присвоена отметке. Если в качестве этого параметра
      *              передано NULL (или пустая строка), то отметка выполняется с текущей меткой времени.
      */
-    Boolean addMark(@NotNull String vehicle,
+    Boolean addMark(@NotNull  String vehicle,
                     @Nullable String timestamp,
                     @Nullable String comment){
 
         if (vehicle==null || vehicle.isEmpty()) return false;
-
         if (comment == null) comment = "";
 
         String request_id = Auxiliary.genStrongUidString(20);
@@ -326,7 +359,7 @@ public class Db {
 
     /* Brief: Удалить все отметки за все сегодняшнюю дату (частичная очистка БД).
      *
-     * Если указан параметр @recordId, все остальные условия обрасываются.
+     * Если указан параметр @recordId, все остальные условия отбрасываются.
      * @recordId - уникальный идентификатор записи (строки).
      *
      * Если в качестве параметра @date указан NULL, то удалить только за текущую дату.
@@ -334,10 +367,15 @@ public class Db {
      *
      * Если в качестве параметра @vehicle указан NULL или пустая строка, то выборка будет касаться всех ТС.
      * Если @vehicle - не пустая строка, то выборка будет касаться только указанного ТС.
+     *
+     * Если параметр @virtual TRUE - производится лишь пометка на удаление (столбец deleted в таблице marks)
+     * и сама запись никогда не удаляется из БД.
+     * В противном случае запись удаляется из БД без возможности восстановления.
     */
     public Boolean removeMarks(@Nullable Integer recordId,
                                @Nullable String date,
-                               @Nullable String vehicle){
+                               @Nullable String vehicle,
+                                         boolean virtual){
         String condition = "";
         if (recordId != null) condition = " WHERE "+TABLE_MARKS_COLUMNS.COLUMN_ID+"='"+recordId.toString()+"'";
         else
@@ -347,9 +385,11 @@ public class Db {
 
         // Дополнительное условие - выборка только для конкретного ТС.
         if (vehicle!=null && !vehicle.isEmpty() && recordId == null) condition += " AND "+TABLE_MARKS_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"'";
-        
-        
-        String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" "+ condition + ";";
+
+        String query;
+        if (virtual) query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" SET " + TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=1 " + condition + ";";
+        else
+            query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" "+ condition + ";";
         try {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
@@ -388,9 +428,13 @@ public class Db {
         return setVehicleState(vehicle, false);
     }
 
-    // Возвращает список/лог отметок в диапазоне дат @dateRange.
-    // Если параметр @dateRange равен NULL, то выборка за текущую дату.
-    public List<VehicleMark> getMarksRawList(DbDateRange dateRange) throws SQLException {
+    /* Brief: Возвращает список/лог отметок в диапазоне дат @dateRange.
+     *
+     * Если параметр @dateRange равен NULL, то выборка за текущую дату.
+     * Если параметр @showDeleted равен TRUE, то в списке будут присутствовать удаленные ранее отметки т.е.
+     * те, которые отмечены на удаление (столбец deleted в таблице marks).
+     */
+    public List<VehicleMark> getMarksRawList(DbDateRange dateRange, boolean showDeleted) throws SQLException {
         if(!isConnected()) return null;
 
         String extra;
@@ -404,6 +448,9 @@ public class Db {
             extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
         }
 
+        // Если не требуется показывать удаленные ранее отметки, создаем дополнительный фильтр.
+        if (!showDeleted) extra += " AND "+TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=0";
+
         ResultSet rs;
         try {
             String query = "SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" WHERE "+extra+";";
@@ -415,7 +462,9 @@ public class Db {
 
         List<VehicleMark> marksList = new ArrayList<>();
         while (rs.next()) {
-            String timestamp = getHHMMFromStringTimestamp(rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP));
+            //String timestamp = getHHMMFromStringTimestamp(rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP));
+            String timestamp = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP);
+
             String vehicle   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_VEHICLE);
             String requestId = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
             String comment   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_COMMENT);
@@ -453,7 +502,7 @@ public class Db {
 
 
     // Получить список заблокированных ТС. Далее, если искомого ТС нет в списке, то считать его НЕ заблокированным.
-    public List<String> getBlockedVehicles() throws  SQLException{
+    private List<String> getBlockedVehicles() throws  SQLException{
         if(!isConnected()) return null;
 
         ResultSet rs;
@@ -480,7 +529,7 @@ public class Db {
 
         if(!isConnected()) return null;
         // Получаем (если это необходимо) лог отметок за текущий день.
-        if (markList == null) markList = getMarksRawList(dateRange);
+        if (markList == null) markList = getMarksRawList(dateRange, false);
 
         // Получаем список заблокированных ТС.
         List<String> blackList;
@@ -607,6 +656,67 @@ public class Db {
         return false;
     }
 
+    public boolean executeScript(String query){
+        try {
+            if (isConnected()) {
+                conn.createStatement().execute(query);
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "EXECUTE_SCRIPT",e.getMessage(), query);
+            return false;
+        }
+        return false;
+    }
+
+    public void executeScriptThrow(String query) throws SQLException{
+        if (isConnected()) conn.createStatement().executeQuery(query);
+    }
+
+    public boolean updateCapacity(VehicleCapacityItem item){
+
+        if (item == null) return false;
+
+        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+
+                " SET "+
+                TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+"='"+item.getType() + "', "+
+                TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+"="+item.getCapacity() + " , "+
+                TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+"='"+item.getComment() + "' "+
+                " WHERE "+TABLE_CAPACITY_COLUMNS.COLUMN_ID+"="+item.getId() + ";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "UPDATE_TABLE_CAPACITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+    public List<VehicleCapacityItem> getCapacities(){
+
+        List<VehicleCapacityItem> itemsList = new ArrayList<>();
+        ResultSet rs;
+        try {
+            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+";");
+
+            while (rs.next()){
+                VehicleCapacityItem item = new VehicleCapacityItem();
+
+                item.setId(Integer.valueOf(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_ID)));
+                item.setType(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_TYPE));
+                item.setCapacity(Integer.valueOf(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY)));
+                item.setComment(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT));
+
+                itemsList.add(item);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return  itemsList;
+    }
+
     /* Прверка целостности БД. Создание БД и ее таблиц при необходимости. */
     private Boolean checkMetadata(){
         boolean result;
@@ -680,6 +790,7 @@ public class Db {
                 "  "+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+" timestamp default CURRENT_TIMESTAMP not null,\n" +
                 "  "+TABLE_MARKS_COLUMNS.COLUMN_MAC+" varchar(18) null,\n" +
                 "  "+TABLE_MARKS_COLUMNS.COLUMN_REQUEST+" varchar(20) not null,\n" +
+                "  "+TABLE_MARKS_COLUMNS.COLUMN_DELETED+" bit default b'0' not null,\n" +
                 "  "+TABLE_MARKS_COLUMNS.COLUMN_COMMENT+" varchar(255) null,\n" +
                 "  constraint request_unique\n" +
                 "  unique ("+TABLE_MARKS_COLUMNS.COLUMN_REQUEST+")\n" +
@@ -703,10 +814,20 @@ public class Db {
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+" varchar(18) not null,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+" int(11) unsigned default '0' not null,\n" +
-                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+"    bit default b'0' not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+" bit default b'0' not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned default '0' not null,\n" +
                 "  constraint vehicle_id_unique\n" +
                 "  unique ("+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+")\n" +
                 ");");
+
+        // Создать таблицу {capacity}, если отсутствует.
+        Log.println("Проверка существования/создание табицы {capacity}.");
+        result = conn.createStatement().executeUpdate("create table if not exists "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+"\n" +
+                "(\n" +
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+" varchar(50) not null,\n" +
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned default '0' not null,\n" +
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+" varchar(255) null);");
     }
 
     // Создаем необходимые переменные в соответствующих таблицах БД после первого запуска и инициализации БД.

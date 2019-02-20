@@ -5,3 +5,7 @@
 .label {
     -fx-font-size: 12; //Высота текста
 }
+
+.tab-format .tab-label {
+    -fx-text-fill: red;
+}

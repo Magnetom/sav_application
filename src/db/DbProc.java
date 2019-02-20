@@ -9,14 +9,14 @@ public class DbProc {
 
     public static void clearTodayMarks(String vehicle){
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null,null, vehicle);
+        Db.getInstance().removeMarks(null,null, vehicle, true);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
 
     public static void clearMark(int recordId){
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(recordId,null, null);
+        Db.getInstance().removeMarks(recordId,null, null, true);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }

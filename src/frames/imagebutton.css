@@ -1,9 +1,19 @@
-.button {
+.user_settings_button {
+    -fx-background-image: url("/images/user-settings-32.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.user_settings_button:selected {
+    -fx-background-image: url("/images/user-settings-32.png");
+}
+
+.admin_settings_button {
     -fx-background-image: url("/images/services-32.png");
     -fx-background-repeat: no-repeat;
     -fx-background-position: center;
 }
 
-.button:selected {
+.admin_settings_button:selected {
     -fx-background-image: url("/images/services-32.png");
 }

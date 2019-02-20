@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="AURA remote" uuid="ebb91e1c-7c46-4f9c-a2cb-ebfcec4ef8bf">
+    <data-source source="LOCAL" name="AURA" uuid="ebb91e1c-7c46-4f9c-a2cb-ebfcec4ef8bf">
       <driver-ref>mysql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.jdbc.Driver</jdbc-driver>
-      <jdbc-url>jdbc:mysql://192.168.1.5:3306/aura</jdbc-url>
+      <jdbc-url>jdbc:mysql://192.168.1.231:3306/aura</jdbc-url>
       <driver-properties>
         <property name="autoReconnect" value="true" />
         <property name="zeroDateTimeBehavior" value="convertToNull" />

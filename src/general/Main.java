@@ -27,8 +27,8 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     public static int SW_STAGE     = 1; // Стадия/этап.
-    public static int SW_BUILD     = 6; // Сборка.
-    public static int SW_REVISION  = 7; // Ревизия.
+    public static int SW_BUILD     = 8; // Сборка.
+    public static int SW_REVISION  = 1; // Ревизия.
     // Текущая версия программного обеспечения.
     public static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 
@@ -218,7 +218,7 @@ public class Main extends Application {
                                 final DbDateRange dateRange = mainController.getUserSelectedDateRange();
 
                                 // Получаем список всех отметок за сегодняшнюю дату.
-                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange));
+                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, false));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 

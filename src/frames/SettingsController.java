@@ -1,13 +1,20 @@
 package frames;
 
+import bebug.Log;
 import db.Db;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.IntegerStringConverter;
+import utils.FileIO;
 
+import java.io.File;
+import java.util.List;
 import java.util.function.UnaryOperator;
 
 import static broadcast.Broadcast.DatasetManualChangedNotification;
@@ -15,6 +22,8 @@ import static broadcast.Broadcast.SettingsChangedNotification;
 import static utils.Auxiliary.isNumeric;
 
 public class SettingsController {
+
+    private static final String TAG = "SETTINGS_CONTROLLER";
 
     public TextField loopDelayText;
     public Button saveButton;
@@ -24,6 +33,9 @@ public class SettingsController {
     public Button resetPopularityButton;
     public Button removeAllVehiclesButton;
     public Button allDbRemoveButton;
+    public Button runScriptButton;
+
+    private File initialDirectory;
 
     @FXML
     public void initialize() {
@@ -68,6 +80,56 @@ public class SettingsController {
         removeAllVehiclesButton.setOnAction(event -> removeAllVehicles());
         /* Настраиваем кнопку "ОЧИСТИТЬ БАЗУ ДАННЫХ ПОЛНОСТЬЮ" */
         allDbRemoveButton.setOnAction(event -> allDbRemove());
+
+        /* Настраиваем кнопку "Запустить скрипт" */
+        runScriptButton.setGraphic(new ImageView(new Image("images/run-script-16.png")));
+        runScriptButton.setOnAction(event -> runScriptDialog());
+    }
+
+    private void runScriptDialog() {
+        final FileChooser fileChooser = new FileChooser();
+        // Set title for FileChooser
+        fileChooser.setTitle("Выберите скрипт-файлы для выполнения");
+        // Add Extension Filters
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQL", "*.sql"),
+                new FileChooser.ExtensionFilter("TXT", "*.txt"),
+                new FileChooser.ExtensionFilter("Все файлы", "*.*"));
+        // Устанавливается домашняя директория.
+        //fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        if (initialDirectory != null) fileChooser.setInitialDirectory(initialDirectory);
+        // Вызывается диалог выбора файлов.
+        List<File> files = fileChooser.showOpenMultipleDialog(closeButton.getScene().getWindow());
+        // Если пользователь выбрал хотя бы один файл.
+        if (files != null && !files.isEmpty()){
+            // Сохраняется выбранная директория на время сессии.
+            initialDirectory = files.get(0).getParentFile();
+            // Проверяется количество файлов в списке
+            if (files.size() > 50) {
+                Log.printerror(TAG, "runScriptDialog","Ошибка: общее количество файлов скриптов "+ files.size()+" шт. превышает установленный порог в 50 шт.", null);
+                return;
+            }
+            Log.println("Выполняются файлы скриптов. Общее количество: "+ files.size()+" шт.");
+            // Перебираем список файлов.
+            for (File file:files) {
+                Log.println("Обрабатывается файл: "+ file.toString());
+                // Защита от БОЛЬШИХ файлов: если размер файла превышает установленный предел - переходим к следующему файлу.
+                if (file.length() > 10000) {
+                    Log.printerror(TAG, "runScriptDialog","Ошибка: размер файла в "+file.length()+" байт превышает установленный порога в 10000 байт.", null);
+                    continue;
+                }
+                String script = FileIO.readFile(file);
+                // Если скрипт не пуст, то выполняем его.
+                if (!script.isEmpty()){
+                    Db db = Db.getInstance();
+                    if (db.executeScript(script)){
+                        Log.println("Скрипт выполнен - [ОК].");
+                    } else
+                        Log.println("Скрипт не выполнен - [FAIL].");
+                }
+            }
+            Log.println("Выполнение скриптов завершено.");
+        }
     }
 
     private void allDbRemove() {
@@ -96,14 +158,14 @@ public class SettingsController {
 
     private void clearAllMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null,"", null);
+        Db.getInstance().removeMarks(null,"", null, false);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
 
     private void clearTodayMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null,null, null);
+        Db.getInstance().removeMarks(null,null, null, false);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }

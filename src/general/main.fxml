@@ -13,21 +13,23 @@
         <items>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                <children>
-                  <TableView fx:id="todayVehiclesStatistic" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <TableView fx:id="todayVehiclesStatistic" layoutY="39.0" prefHeight="294.0" prefWidth="416.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="97.0" text="Госномер" />
                       <TableColumn prefWidth="131.0" text="Количество кругов" />
                     </columns>
                   </TableView>
+                  <Label alignment="CENTER" layoutX="60.0" layoutY="14.0" minHeight="24.0" text="Статистика автотранспорта за указанный период" textFill="#726f6f" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                </children></AnchorPane>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="75.0">
                <children>
-                  <TableView fx:id="todayVehiclesMarksLog" layoutX="-21.0" prefHeight="333.0" prefWidth="186.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <TableView fx:id="todayVehiclesMarksLog" layoutX="-21.0" layoutY="21.0" prefHeight="312.0" prefWidth="170.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="51.0" text="Время" />
                       <TableColumn prefWidth="99.0" text="Госномер" />
                     </columns>
                   </TableView>
+                  <Label alignment="CENTER" layoutX="57.0" layoutY="25.0" minHeight="24.0" text="История рейсов" textAlignment="CENTER" textFill="#726f6f" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                </children>
             </AnchorPane>
             <AnchorPane minWidth="0.0">
@@ -43,7 +45,7 @@
       </SplitPane>
    </center>
    <bottom>
-      <TitledPane animated="false" expanded="false" text="Лог событий" BorderPane.alignment="CENTER">
+      <TitledPane fx:id="logTitledPane" animated="false" expanded="false" text="Лог событий" BorderPane.alignment="CENTER">
         <content>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                <children>
@@ -98,28 +100,30 @@
                </children>
             </AnchorPane>
             <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#fffed9" height="35.0" layoutX="165.0" layoutY="3.0" stroke="#ffcc13" strokeType="INSIDE" width="159.0" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="165.0" AnchorPane.topAnchor="3.0" />
-            <Label layoutX="170.0" layoutY="8.0" style="-fx-font-size:16.0;" text="Интервал:" textFill="#6f6c6c">
+            <Label layoutX="170.0" layoutY="8.0" style="-fx-font-size:16.0;" text="Интервал:" textFill="#6f6c6c" AnchorPane.bottomAnchor="7.0" AnchorPane.topAnchor="8.0">
                <font>
                   <Font size="16.0" />
                </font>
             </Label>
-            <Label fx:id="markDelay" layoutX="247.0" layoutY="8.0" style="-fx-font-size:16.0; -fx-font-weight: bold" text="15" AnchorPane.leftAnchor="247.0">
+            <Label fx:id="markDelay" layoutX="249.0" layoutY="8.0" style="-fx-font-size:16.0; -fx-font-weight: bold" text="15" AnchorPane.bottomAnchor="7.0" AnchorPane.leftAnchor="249.0" AnchorPane.topAnchor="8.0">
                <font>
                   <Font size="16.0" />
                </font>
             </Label>
-            <Label layoutX="277.0" layoutY="8.0" style="-fx-font-size:16.0;" text="мин." textFill="#6f6c6c">
+            <Label layoutX="277.0" layoutY="8.0" style="-fx-font-size:16.0;" text="мин." textFill="#6f6c6c" AnchorPane.bottomAnchor="7.0" AnchorPane.topAnchor="8.0">
                <font>
                   <Font size="16.0" />
                </font>
             </Label>
-            <Button layoutX="341.0" layoutY="2.0" mnemonicParsing="false" onAction="#onSetupAction" prefWidth="38.0" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="341.0" AnchorPane.topAnchor="2.0" />
+            <Button layoutX="341.0" layoutY="2.0" mnemonicParsing="false" onAction="#onSetupAction" prefWidth="38.0" styleClass="admin_settings_button" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="341.0" AnchorPane.topAnchor="2.0" />
+            <Button layoutX="396.0" layoutY="2.0" mnemonicParsing="false" onAction="#onUserSetupAction" prefWidth="38.0" styleClass="user_settings_button" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.topAnchor="2.0" />
             <Separator layoutX="331.0" layoutY="2.0" orientation="VERTICAL" prefHeight="200.0" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="331.0" AnchorPane.topAnchor="2.0" />
             <ImageView fx:id="OnOffImage" fitHeight="28.0" fitWidth="315.0" pickOnBounds="true" preserveRatio="true" style="-fx-cursor: hand;" AnchorPane.bottomAnchor="6.0" AnchorPane.rightAnchor="6.0" AnchorPane.topAnchor="6.0">
                <image>
                   <Image url="@../images/switch-off-gray-48.png" />
                </image>
             </ImageView>
+            <Separator layoutX="385.0" layoutY="2.0" orientation="VERTICAL" prefHeight="36.0" prefWidth="8.0" AnchorPane.bottomAnchor="2.0" AnchorPane.topAnchor="2.0" />
          </children>
       </AnchorPane>
    </top>
