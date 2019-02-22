@@ -9,11 +9,11 @@
 <?import javafx.scene.text.Font?>
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="200.0" minWidth="300.0" prefHeight="400.0" prefWidth="600.0" stylesheets="/frames/sample.css" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="general.MainController">
    <center>
-      <SplitPane dividerPositions="0.7, 1.0" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+      <SplitPane dividerPositions="0.6287625418060201, 0.9949832775919732" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                <children>
-                  <TableView fx:id="todayVehiclesStatistic" layoutY="39.0" prefHeight="294.0" prefWidth="416.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
+                  <TableView fx:id="todayVehiclesStatistic" layoutY="39.0" prefHeight="309.0" prefWidth="358.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="97.0" text="Госномер" />
                       <TableColumn prefWidth="131.0" text="Количество кругов" />
@@ -34,7 +34,8 @@
             </AnchorPane>
             <AnchorPane minWidth="0.0">
                <children>
-                  <TableView fx:id="allDbVehiclesList" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <Label alignment="CENTER" minHeight="24.0" text="Список транспортных средств" textAlignment="CENTER" textFill="#726f6f" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                  <TableView fx:id="allDbVehiclesList" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="75.0" text="Госномер" />
                       <TableColumn prefWidth="75.0" text="Статус" />
@@ -115,7 +116,7 @@
                   <Font size="16.0" />
                </font>
             </Label>
-            <Button layoutX="341.0" layoutY="2.0" mnemonicParsing="false" onAction="#onSetupAction" prefWidth="38.0" styleClass="admin_settings_button" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="341.0" AnchorPane.topAnchor="2.0" />
+            <Button layoutX="341.0" layoutY="2.0" mnemonicParsing="false" onAction="#onMasterSetupRequest" prefWidth="38.0" styleClass="admin_settings_button" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="341.0" AnchorPane.topAnchor="2.0" />
             <Button layoutX="396.0" layoutY="2.0" mnemonicParsing="false" onAction="#onUserSetupAction" prefWidth="38.0" styleClass="user_settings_button" stylesheets="@../frames/imagebutton.css" AnchorPane.bottomAnchor="2.0" AnchorPane.topAnchor="2.0" />
             <Separator layoutX="331.0" layoutY="2.0" orientation="VERTICAL" prefHeight="200.0" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="331.0" AnchorPane.topAnchor="2.0" />
             <ImageView fx:id="OnOffImage" fitHeight="28.0" fitWidth="315.0" pickOnBounds="true" preserveRatio="true" style="-fx-cursor: hand;" AnchorPane.bottomAnchor="6.0" AnchorPane.rightAnchor="6.0" AnchorPane.topAnchor="6.0">

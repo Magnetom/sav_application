@@ -64,6 +64,7 @@ public class Db {
         public static final String COLUMN_VEHICLE    = "vehicle";
         public static final String COLUMN_POPULARITY = "popularity";
         public static final String COLUMN_BLOCKED    = "blocked";
+        public static final String COLUMN_DELETED    = "deleted";
         public static final String COLUMN_CAPACITY   = "capacity";
 
         public static final int ID_COLUMN_ID          = 0;
@@ -234,7 +235,7 @@ public class Db {
         // Удаляются все ТС.
         result = removeAllVehicles();
         // Удаляются все отметки.
-        result &= removeMarks(null,"",null, false);
+        result &= toggleMarks(null, null, new DbDateRange(true), DataToggleTypes.REAL_DELETE);
         // Удаляются все отметки.
         result &= removeAllVariables();
         // Удаляются все грузовместимости.
@@ -284,23 +285,44 @@ public class Db {
         return true;
     }
 
+    enum PopularityActionTypes {INCREMENT, DECREMENT, NOTHING}
+
     // Увеличить рейтинг на единицу.
-    public Boolean incrementPopularity(String vehicle){
+    private Boolean incrementPopularity(String vehicle){
+        return updatePopularity(vehicle, PopularityActionTypes.INCREMENT);
+    }
+
+    // Уменьшит рейтинг на единицу.
+    private Boolean decrementPopularity(String vehicle){
+        return updatePopularity(vehicle, PopularityActionTypes.DECREMENT);
+    }
+
+    // Увеличить рейтинг на единицу.
+    private Boolean updatePopularity(String vehicle, PopularityActionTypes actionType){
         if(!isConnected()) return false;
 
         if (vehicle == null) return false;
 
-        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+" SET "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+"="+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+"+1 WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"';";
+        String action;
+        switch (actionType){
+            case DECREMENT: action = "-"; break;
+            case INCREMENT: action = "+"; break;
+            case NOTHING  : return true;
+            default: action = "+"; break;
+        }
+
+        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+" SET "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+"="+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+action+"1 WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"';";
         try {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
             OnFailReConnect(); // Пытаемся переконнектиться.
-            Log.printerror(TAG_SQL, "INCREMENT_POPULARITY",e.getMessage(), query);
+            Log.printerror(TAG_SQL, "UPDATE_POPULARITY",e.getMessage(), query);
             return false;
         }
         return true;
     }
+
 
     // Очистить все рейтинги популярности.
     public Boolean resetPopularity(){
@@ -357,52 +379,61 @@ public class Db {
         return true;
     }
 
-    /* Brief: Удалить все отметки за все сегодняшнюю дату (частичная очистка БД).
+    /* Brief: Переключает флаг состояния ТС между УДАЛЕН и ВОССТАНОВЛЕН. Также возможно физическое
+     *        удаление объекта при указании соответствующего @toggleType.
      *
-     * Если указан параметр @recordId, все остальные условия отбрасываются.
-     * @recordId - уникальный идентификатор записи (строки).
-     *
-     * Если в качестве параметра @date указан NULL, то удалить только за текущую дату.
-     * Если @date - пустая строка, то удалить все данные.
-     *
-     * Если в качестве параметра @vehicle указан NULL или пустая строка, то выборка будет касаться всех ТС.
-     * Если @vehicle - не пустая строка, то выборка будет касаться только указанного ТС.
-     *
-     * Если параметр @virtual TRUE - производится лишь пометка на удаление (столбец deleted в таблице marks)
-     * и сама запись никогда не удаляется из БД.
-     * В противном случае запись удаляется из БД без возможности восстановления.
-    */
-    public Boolean removeMarks(@Nullable Integer recordId,
-                               @Nullable String date,
-                               @Nullable String vehicle,
-                                         boolean virtual){
-        String condition = "";
-        if (recordId != null) condition = " WHERE "+TABLE_MARKS_COLUMNS.COLUMN_ID+"='"+recordId.toString()+"'";
-        else
-        if (date == null) condition = "WHERE DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
-        else
-        if (!date.equals("")) condition = "WHERE DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE('"+date+"')";
-
-        // Дополнительное условие - выборка только для конкретного ТС.
-        if (vehicle!=null && !vehicle.isEmpty() && recordId == null) condition += " AND "+TABLE_MARKS_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"'";
+     */
+    public Boolean toggleVehicle(@Nullable String recordId,
+                                 @NotNull  String vehicle,
+                                 @NotNull  DataToggleTypes toggleType) {
 
         String query;
-        if (virtual) query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" SET " + TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=1 " + condition + ";";
+        String condition;
+
+        // Защита от непреднамеренной очистки всех данных ТС.
+        if ( (recordId == null || recordId.isEmpty()) && (vehicle == null || vehicle.isEmpty()) ) return false;
+
+        if (recordId != null) condition = TABLE_VEHICLES_COLUMNS.COLUMN_ID+"='"+recordId+"'";
         else
-            query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" "+ condition + ";";
+                              condition = TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"'";
+
+        //if (!condition.isEmpty()) condition = "WHERE " + condition;
+        condition = "WHERE " + condition;
+
+        switch (toggleType){
+            //------------------------------------------------------------------------------------------
+            // Задание на удаление.
+            case MARK_AS_DELETED:
+                query = "UPDATE " + GENERAL_SCHEMA_NAME + "." + TABLE_VEHICLES + " SET " + TABLE_VEHICLES_COLUMNS.COLUMN_DELETED + "=1 " + condition + ";";
+                break;
+            //------------------------------------------------------------------------------------------
+            // Задание на восстановление ранее помеченной на удаление записи.
+            case MARK_AS_RESTORED:
+                query = "UPDATE " + GENERAL_SCHEMA_NAME + "." + TABLE_VEHICLES + " SET " + TABLE_VEHICLES_COLUMNS.COLUMN_DELETED + "=0 " + condition + ";";
+                break;
+            //------------------------------------------------------------------------------------------
+            // Реальное удаление данных выборки без возможности их восстановления.
+            case REAL_DELETE:
+                query = "DELETE FROM " + GENERAL_SCHEMA_NAME + "." + TABLE_VEHICLES + " " + condition + ";";
+                break;
+            //------------------------------------------------------------------------------------------
+            default:
+                query = ";";
+                break;
+        }
         try {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
-            Log.printerror(TAG_SQL, "REMOVE_MARKS",e.getMessage(), query);
+            OnFailReConnect();
+            Log.printerror(TAG_SQL, "TOGGLE_VEHICLE",e.getMessage(), query);
             return false;
         }
         return true;
     }
 
     // Установить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
-    public Boolean setVehicleState(String vehicle, boolean blocked){
+    public Boolean setVehicleBlocked(String vehicle, boolean blocked){
         if (vehicle == null || (vehicle.equals("")) ) return false;
         if(!isConnected()) return false;
         Integer st = (blocked)?1:0;
@@ -420,12 +451,103 @@ public class Db {
 
     // Заблокировать ТС.
     public Boolean setVehicleBlocked(String vehicle) {
-        return setVehicleState(vehicle, true);
+        return setVehicleBlocked(vehicle, true);
     }
 
     // Разблокировать ТС.
     public Boolean setVehicleUnblocked(String vehicle) {
-        return setVehicleState(vehicle, false);
+        return setVehicleBlocked(vehicle, false);
+    }
+
+
+    private String getDateRangeTimestampCondition(DbDateRange dateRange){
+        if (dateRange != null){
+            if (dateRange.getAllDatesFlag()){
+                return "";
+            } else {
+                if (dateRange.isSingleDate()) {
+                    return "DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")=DATE('" + dateRange.getSingleDate() + "')";
+                } else {
+                    return "DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")>=DATE('" + dateRange.getStartDate() + "') AND DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")<=DATE('" + dateRange.getStopDate() + "')";
+                }
+            }
+        } else {
+            return "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
+        }
+    }
+
+    public enum DataToggleTypes {
+        MARK_AS_DELETED, MARK_AS_RESTORED, REAL_DELETE
+    }
+
+    /* Brief: Удалить/восстановить все отметки за диапазон дат.
+     *
+     * Если указан параметр @recordId, все остальные условия отбрасываются.
+     * @recordId - уникальный идентификатор записи (строки).
+     *
+     * Если в качестве параметра @date указан NULL, то удалить только за текущую дату.
+     * Если @date - пустая строка, то удалить все данные.
+     *
+     * Если в качестве параметра @vehicle указан NULL или пустая строка, то выборка будет касаться всех ТС.
+     * Если @vehicle - не пустая строка, то выборка будет касаться только указанного ТС.
+     */
+    public Boolean toggleMarks(@Nullable Integer recordId,
+                               @NotNull  String vehicle,
+                               @Nullable DbDateRange dateRange,
+                               @NotNull  DataToggleTypes toggleType){
+        String query;
+        String condition;
+
+        if (recordId != null) condition = TABLE_MARKS_COLUMNS.COLUMN_ID+"='"+recordId.toString()+"'";
+        else {
+            condition = getDateRangeTimestampCondition(dateRange);
+        }
+
+        // Дополнительное условие - выборка только для конкретного ТС.
+        if (vehicle!=null && !vehicle.isEmpty() && recordId == null) {
+            if (!condition.isEmpty()) condition += " AND ";
+            condition += TABLE_MARKS_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"'";
+        }
+
+        condition = "WHERE " + condition;
+
+        PopularityActionTypes popAction = PopularityActionTypes.NOTHING;
+
+        switch (toggleType){
+            //------------------------------------------------------------------------------------------
+            // Задание на удаление.
+            case MARK_AS_DELETED:
+                query = "UPDATE " + GENERAL_SCHEMA_NAME + "." + TABLE_MARKS + " SET " + TABLE_MARKS_COLUMNS.COLUMN_DELETED + "=1 " + condition + ";";
+                popAction = PopularityActionTypes.DECREMENT;
+                break;
+            //------------------------------------------------------------------------------------------
+            // Задание на восстановление ранее помеченной на удаление записи.
+            case MARK_AS_RESTORED:
+                query = "UPDATE " + GENERAL_SCHEMA_NAME + "." + TABLE_MARKS + " SET " + TABLE_MARKS_COLUMNS.COLUMN_DELETED + "=0 " + condition + ";";
+                popAction = PopularityActionTypes.INCREMENT;
+                break;
+            //------------------------------------------------------------------------------------------
+            // Реальное удаление данных выборки без возможности их восстановления.
+            case REAL_DELETE:
+                query = "DELETE FROM " + GENERAL_SCHEMA_NAME + "." + TABLE_MARKS + " " + condition + ";";
+                popAction = PopularityActionTypes.DECREMENT;
+                break;
+            //------------------------------------------------------------------------------------------
+            default:
+                query = ";";
+                break;
+        }
+
+        try {
+            conn.createStatement().executeUpdate(query);
+            updatePopularity(vehicle, popAction);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            OnFailReConnect(); // Пытаемся переконнектиться.
+            Log.printerror(TAG_SQL, "TOGGLE_MARKS",e.getMessage(), query);
+            return false;
+        }
+        return true;
     }
 
     /* Brief: Возвращает список/лог отметок в диапазоне дат @dateRange.
@@ -435,25 +557,22 @@ public class Db {
      * те, которые отмечены на удаление (столбец deleted в таблице marks).
      */
     public List<VehicleMark> getMarksRawList(DbDateRange dateRange, boolean showDeleted) throws SQLException {
+
         if(!isConnected()) return null;
 
-        String extra;
-        if (dateRange != null){
-            if (dateRange.isSingleDate()){
-                extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE('"+dateRange.getSingleDate()+"')";
-            } else {
-                extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")>=DATE('"+dateRange.getStartDate()+"') AND DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")<=DATE('"+dateRange.getStopDate()+"')";
-            }
-        } else {
-            extra = "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
-        }
+        ResultSet rs;
+
+        String condition = getDateRangeTimestampCondition(dateRange);
 
         // Если не требуется показывать удаленные ранее отметки, создаем дополнительный фильтр.
-        if (!showDeleted) extra += " AND "+TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=0";
+        if (!showDeleted) {
+            if (!condition.isEmpty()) condition += " AND ";
+            condition += TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=0";
+        }
 
-        ResultSet rs;
+        if (!condition.isEmpty()) condition = "WHERE "+condition;
         try {
-            String query = "SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" WHERE "+extra+";";
+            String query = "SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" "+condition+";";
             rs = conn.createStatement().executeQuery(query);
         } catch (SQLException e){
             OnFailReConnect(); // Пытаемся переконнектиться.
@@ -464,25 +583,32 @@ public class Db {
         while (rs.next()) {
             //String timestamp = getHHMMFromStringTimestamp(rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP));
             String timestamp = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP);
-
             String vehicle   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_VEHICLE);
-            String requestId = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
+            String request = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
+            boolean deleted  = rs.getBoolean(TABLE_MARKS_COLUMNS.COLUMN_DELETED);
             String comment   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_COMMENT);
             int    recordId  = rs.getInt(TABLE_MARKS_COLUMNS.COLUMN_ID);
 
-            VehicleMark mark = new VehicleMark(timestamp, vehicle, requestId, recordId, comment);
+            VehicleMark mark = new VehicleMark(timestamp, vehicle, request, deleted, recordId, comment);
             marksList.add(mark);
         }
         return marksList;
     }
 
-    // Получить полный список всех зарегистрированных ТС.
-    public List<VehicleItem> getAllVehicles() throws  SQLException{
+    /* Получить полный список всех зарегистрированных ТС.
+     *
+     * Если параметр @show_deleted равен TRUE, то в выбоке будут присутствовать удаленные объекты.
+     */
+    public List<VehicleItem> getAllVehicles(boolean show_deleted) throws  SQLException{
         if(!isConnected()) return null;
 
         ResultSet rs;
+        String condition = "";
+
+        if (!show_deleted) condition = "WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_DELETED+"=0";
+
         try {
-            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES);
+            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES + " "+condition + ";");
         } catch (SQLException e){
             OnFailReConnect(); // Пытаемся переконнектиться.
             throw e;
@@ -494,6 +620,7 @@ public class Db {
                     rs.getString(TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE),
                     0,
                     rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED),
+                    rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_DELETED),
                     rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY)+1,
                     false));
         }
@@ -501,7 +628,8 @@ public class Db {
     }
 
 
-    // Получить список заблокированных ТС. Далее, если искомого ТС нет в списке, то считать его НЕ заблокированным.
+    // Получить список заблокированных ТС. В список не попадают помеченные на удаление ТС.
+    // Далее, если искомого ТС нет в списке, то считать его НЕ заблокированным.
     private List<String> getBlockedVehicles() throws  SQLException{
         if(!isConnected()) return null;
 
@@ -528,7 +656,9 @@ public class Db {
     public List<VehicleItem> getVehiclesStatistic(DbDateRange dateRange, @Nullable List<VehicleMark> markList) throws SQLException{
 
         if(!isConnected()) return null;
+
         // Получаем (если это необходимо) лог отметок за текущий день.
+        // При этом не учитываем объекты, помеченные на удаление.
         if (markList == null) markList = getMarksRawList(dateRange, false);
 
         // Получаем список заблокированных ТС.
@@ -540,11 +670,11 @@ public class Db {
             throw e;
         }
 
-        // Создаем экземпляр класса списка статистики.
-        List<VehicleItem> list = new ArrayList<>();
-
         //////////////////////////////////////////////////////////////////////////////////////
         boolean exist;
+
+        // Создаем экземпляр класса списка статистики.
+        List<VehicleItem> list = new ArrayList<>();
 
         for (VehicleMark mark: markList) {
             exist = false;
@@ -560,12 +690,13 @@ public class Db {
             if (!exist) {
                 boolean isBlocked = false;
                 // Ищем ТС в списке заблокированных ТС.
+                if (blackList != null)
                 for (String blackItem : blackList) {
                     // Если ТС есть в списке заблокированных - делаем отметку об этом.
                     if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
                 }
                 // Добавляем новое ТС в новый список.
-                list.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, 0,false) );
+                list.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, false,0,false) );
             }
         }
         //////////////////////////////////////////////////////////////////////////////////////

@@ -6,9 +6,17 @@ public class VehicleItem {
     private Integer loopsCnt;
     private Integer popularity;
     private Boolean blocked;
+    private Boolean deleted;
     private Boolean filtered;
 
-    public VehicleItem(String vehicle, Integer loops, Boolean blocked, Integer popularity, Boolean filtered){ this.popularity = popularity; this.vehicle = vehicle; loopsCnt = loops; this.blocked = blocked; this.filtered = filtered;}
+    public VehicleItem(String vehicle, Integer loops, Boolean blocked, Boolean deleted, Integer popularity, Boolean filtered){
+        this.popularity = popularity;
+        this.vehicle    = vehicle;
+        this.loopsCnt   = loops;
+        this.blocked    = blocked;
+        this.deleted    = deleted;
+        this.filtered   = filtered;
+    }
 
     public void setFiltered(Boolean filtered) {this.filtered = filtered; }
 
@@ -38,4 +46,8 @@ public class VehicleItem {
 
     public Integer getPopularity() {return popularity; }
     public void setPopularity(Integer popularity) { this.popularity = popularity; }
+
+    public Boolean isDeleted() { return deleted; }
+
+    public void setDeleted(Boolean deleted) { this.deleted = deleted; }
 }

@@ -5,6 +5,7 @@ import broadcast.Broadcast;
 import broadcast.OnDbConnectionChanged;
 import db.Db;
 import db.DbDateRange;
+import enums.Users;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -15,6 +16,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import marks.VehicleItem;
@@ -78,6 +80,17 @@ public class Main extends Application {
         primaryStage.show();
         // Закрываем все дочерние окна, поражденные основным контроллером.
         primaryStage.setOnCloseRequest(event -> mainController.closeAllChildStages());
+        // При нажатии на F5 принудительно обновляем содержимое всех визуальных форм.
+        root.setOnKeyPressed(event -> {
+            // Ручное обновление набора всех данных.
+            if (event.getCode() == KeyCode.F5){
+                manualSampleTrigger = true;
+            }
+            // Переключение между пользователями.
+            if (event.getCode() == KeyCode.F8){
+                mainController.onMasterSetupRequest(null);
+            }
+        });
     }
 
     private void initLocalSettings() {
@@ -215,20 +228,31 @@ public class Main extends Application {
                             if (db.isDatasetModified() || manualSampleTrigger) {
                                 manualSampleTrigger = false;
 
+                                // Получаем диапазон выборки, выбранный пользователем.
                                 final DbDateRange dateRange = mainController.getUserSelectedDateRange();
+                                // Плучаем текущего пользователя.
+                                final Users currUser = mainController.getCurrentUser();
+
+                                // Определяем (в зависимости от текущего пользователя), отображать ли скрытые/удаленные элементы в списках.
+                                boolean showDeletedItems = false;
+
+                                switch (currUser){
+                                    case USER: showDeletedItems = false; break; // Для пользователя USER скрываем удаленные ранее элементы.
+                                    case ADMIN:showDeletedItems = true;  break; // Для пользователя ADMIN отображаем.
+                                }
 
                                 // Получаем список всех отметок за сегодняшнюю дату.
-                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, false));
+                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, showDeletedItems));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, null/*markList*/));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
 
                                 // Получаем список всех зарегистрированных ТС.
-                                final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles());
+                                final ObservableList<VehicleItem> vehiclesList = FXCollections.observableArrayList(db.getAllVehicles(showDeletedItems));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printAllVehicles(vehiclesList));
 

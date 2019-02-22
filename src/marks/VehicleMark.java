@@ -1,20 +1,28 @@
 package marks;
 
 public class VehicleMark {
-    private String vehicle;
-    private String timestamp;
-    private String requestId;
-    private String comment;
-    private int    recordId;
+
+    private int     recordId;
+    private String  vehicle;
+    private String  timestamp;
+    private String  request;
+    private boolean deleted;
+    private String  comment;
+
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
 
     public VehicleMark(String timestamp,
                        String vehicle,
                        String request,
+                       boolean deleted,
                        int record,
                        String comment){
+
         this.timestamp  = timestamp;
         this.vehicle    = vehicle;
-        this.requestId  = request;
+        this.request    = request;
+        this.deleted    = deleted;
         this.recordId   = record;
         this.comment    = comment;
     }
@@ -25,8 +33,8 @@ public class VehicleMark {
     public int  getRecordId() {return recordId;}
     public void setRecordId(int recordId) {this.recordId = recordId;}
 
-    public String getRequestId() {return requestId;}
-    public void   setRequestId(String requestId) {this.requestId = requestId;}
+    public String getRequest() {return request;}
+    public void setRequest(String request) {this.request = request;}
 
 
     public String getVehicle(){return vehicle;}

@@ -8,6 +8,10 @@ public class DbDateRange {
 
     private LocalDate startDate;
     private LocalDate stopDate;
+    private boolean allDatesFlag; // Флаг, указывающий что даиапазон дат как таковой отсутствует и требуется все возможные даты.
+
+    public DbDateRange(){}
+    public DbDateRange(boolean allDatesFlag){this.allDatesFlag=allDatesFlag;}
 
     private LocalDate convertDate(String date){
         return DateTime.getDbDateConverter().fromString(date);
@@ -22,6 +26,9 @@ public class DbDateRange {
         if (date instanceof String)     stopDate = convertDate((String) date);
         if (date instanceof LocalDate)  stopDate = (LocalDate) date;
     }
+
+    public void setAllDatesFlag (){allDatesFlag = true;}
+    public boolean getAllDatesFlag (){return allDatesFlag;}
 
     public String getStartDateFormatted() { return DateTime.getDbDateConverter().toString(startDate); }
 

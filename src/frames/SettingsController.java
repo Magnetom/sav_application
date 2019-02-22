@@ -2,6 +2,7 @@ package frames;
 
 import bebug.Log;
 import db.Db;
+import db.DbDateRange;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
@@ -158,14 +159,14 @@ public class SettingsController {
 
     private void clearAllMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null,"", null, false);
+        Db.getInstance().toggleMarks(null, null, new DbDateRange(true),  Db.DataToggleTypes.REAL_DELETE);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
 
     private void clearTodayMarks() {
         // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().removeMarks(null,null, null, false);
+        Db.getInstance().toggleMarks(null,null, null, Db.DataToggleTypes.REAL_DELETE);
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }

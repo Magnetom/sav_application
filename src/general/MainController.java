@@ -32,6 +32,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import marks.Statuses;
@@ -112,6 +113,10 @@ public class MainController {
         initListeners();
     }
 
+    public Users getCurrentUser(){
+        return currentUserType;
+    }
+
     // Закрывает (если они все-еще открыты) все дочерние окна, поражденные этим контроллером.
     void closeAllChildStages(){
         // Закрываем инженерное меню, если оно все-еще открыто.
@@ -132,12 +137,12 @@ public class MainController {
 
             TableColumn <VehicleItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
             TableColumn <VehicleItem, Integer>  loopsColumn    = new TableColumn<>("Рейсов");
-            TableColumn <VehicleItem, Statuses> statusColumn   = new TableColumn<>("Статус");
+            TableColumn <VehicleItem, Statuses> statusColumn   = new TableColumn<>("Статус блокировки");
             TableColumn <VehicleItem, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
 
             vehicleColumn.setMinWidth(90);
-            loopsColumn.setMinWidth(125);
-            statusColumn.setMinWidth(100);
+            loopsColumn.setMinWidth(80);
+            statusColumn.setMinWidth(125);
 
             loopsColumn.setStyle("-fx-alignment: CENTER;");
             statusColumn.setStyle("-fx-alignment: CENTER;");
@@ -198,7 +203,7 @@ public class MainController {
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
             commentColumn.setCellValueFactory(new PropertyValueFactory<>("comment"));
 
-            timestampColumn.setMinWidth(125);
+            timestampColumn.setMinWidth(150);
             vehicleColumn.setMinWidth(90);
 
             timestampColumn.setStyle("-fx-alignment: CENTER;");
@@ -207,6 +212,13 @@ public class MainController {
             // Set Sort type for userName column
             timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
             timestampColumn.setSortable(true);
+
+            /////////////////////////////////////////////////////////////////////////
+            // Настройка ячеек: отметки, помеченные как "удаленные" выделяются красным шрифтом во всех столбцах.
+            timestampColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
+            vehicleColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
+            commentColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
+            ////////////////////////////////////////////////////////////////////////
 
             // Настраиваем контекстное меню.
             setupTodayVehiclesMarksLogContextMenu();
@@ -220,12 +232,12 @@ public class MainController {
             allDbVehiclesList.getColumns().clear();
             allDbVehiclesList.setEditable(true);
 
-            TableColumn <VehicleItem, String>   vehicleColumn    = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Integer>  popularityColumn = new TableColumn<>("Всего рейсов");
-            TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус");
+            TableColumn <VehicleItem, Object>   vehicleColumn    = new TableColumn<>("Госномер");
+            TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус блокировки");
+            TableColumn <VehicleItem, Object>   popularityColumn = new TableColumn<>("Всего рейсов");
 
             vehicleColumn.setMinWidth(90);
-            statusColumn.setMinWidth(90);
+            statusColumn.setMinWidth(125);
             popularityColumn.setMinWidth(90);
 
             popularityColumn.setStyle("-fx-alignment: CENTER;");
@@ -244,6 +256,12 @@ public class MainController {
             /////////////////////////////////////////////////////////////////////////////
             setupStatusComboBox(statusColumn);
 
+            /////////////////////////////////////////////////////////////////////////
+            // Настройка ячеек: отметки, помеченные как "удаленные" выделяются красным шрифтом во всех столбцах.
+            vehicleColumn.setCellFactory(column -> setupTableCellFactoryVEHICLES());
+            popularityColumn.setCellFactory(column -> setupTableCellFactoryVEHICLES());
+            /////////////////////////////////////////////////////////////////////////
+
             // Настройка выпадающего меню.
             setupVehiclesListContextMenu();
 
@@ -252,6 +270,43 @@ public class MainController {
         }
     }
 
+    // Настройка ячеек для таблицы "СПИСОК ТЕКУЩИХ ОТМЕТОК".
+    private TableCell<VehicleMark, String> setupTableCellFactoryMARKS(){
+        return new TableCell<VehicleMark, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) setText("");
+                else {
+                    setText(item);
+                    TableRow<VehicleMark> currentRow = getTableRow();
+                    if (currentRow != null) {
+                        VehicleMark markItem = currentRow.getItem();
+                        if (markItem != null) if (markItem.isDeleted()) setTextFill(Color.RED); else setTextFill(Color.BLACK);
+                    }
+                }
+            }
+        };
+    }
+
+    // Настройка ячеек для таблицы "СПИСОК ВСЕХ ТРАНСПОРТНЫХ СРЕДСТВ".
+    private TableCell<VehicleItem, Object> setupTableCellFactoryVEHICLES(){
+        return new TableCell<VehicleItem, Object>() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) setText("");
+                else {
+                    setText(item.toString());
+                    TableRow<VehicleItem> currentRow = getTableRow();
+                    if (currentRow != null) {
+                        VehicleItem markItem = currentRow.getItem();
+                        if (markItem != null) if (markItem.isDeleted()) setTextFill(Color.RED); else setTextFill(Color.BLACK);
+                    }
+                }
+            }
+        };
+    }
 
     // Контекстное меню для списка всех ТС.
     private void setupVehiclesListContextMenu(){
@@ -263,6 +318,14 @@ public class MainController {
               // Элемент выпадающего меню для администратора - "ДОБАВИТЬ ОТМЕТКУ".
             final MenuItem addItem = new MenuItem("Добавить отметку");
             addItem.setOnAction(event -> addMarkManually(row.getItem().getVehicle()));
+
+            // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ ГОСНОМЕР".
+            final MenuItem restoreItem = new MenuItem("Восстановить госномер");
+            restoreItem.setOnAction(event -> DbProc.restoreVehicle(row.getItem().getVehicle()));
+
+            // Элемент выпадающего меню для администратора - "УДАЛИТЬ ГОСНОМЕР".
+            final MenuItem deleteItem = new MenuItem("Удалить госномер");
+            deleteItem.setOnAction(event -> DbProc.deleteVehicle(row.getItem().getVehicle()) );
 
             // Элемент выпадающего меню для обычного пользователя.
             final MenuItem dummyItem = new MenuItem( "dummy");
@@ -279,7 +342,9 @@ public class MainController {
                 dummyItem.setText(row.getItem().getVehicle());
                 // Создаем меню с учетом прав текущего пользователя.
                 switch (currentUserType){
-                    case ADMIN: rowMenu.getItems().addAll(addItem,separatorMenuItem);
+                    case ADMIN:
+                        if (row.getItem().isDeleted()) rowMenu.getItems().addAll(addItem,separatorMenuItem,restoreItem);
+                        else rowMenu.getItems().addAll(addItem,separatorMenuItem,deleteItem);
                         break;
                     case USER:  rowMenu.getItems().addAll(dummyItem);
                         break;
@@ -295,24 +360,24 @@ public class MainController {
         });
     }
 
-    // Контекстное меню для списка текущих отметок.
+    // Настраивает контекстное меню для таблицы "СПИСОК ТЕКУЩИХ ОТМЕТОК".
     private void setupTodayVehiclesMarksLogContextMenu(){
+
         todayVehiclesMarksLog.setRowFactory((Callback<TableView<VehicleMark>, TableRow<VehicleMark>>) tableView -> {
-            final TableRow<VehicleMark> row = new TableRow<>();
             final ContextMenu rowMenu = new ContextMenu();
             final SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
-
-            //row.styleProperty().set("");
-            //row.setStyle("-fx-background-color: RED;");
-            //row.setStyle("-fx-color-label-visible: RED;");
-            //row.setStyle("-fx-text-fill: red;");
-            //row.setTextFill(Color.BLUEVIOLET);
-
+            final TableRow<VehicleMark> row = new TableRow<>();
 
             // Элемент выпадающего меню для администратора - "УДАЛИТЬ ОТМЕТКУ".
             final MenuItem removeItem = new MenuItem("Удалить отметку");
             removeItem.setOnAction(event -> {
-                DbProc.clearMark(row.getItem().getRecordId());
+                DbProc.clearMark(row.getItem().getRecordId(), row.getItem().getVehicle());
+            });
+
+            // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ ОТМЕТКУ".
+            final MenuItem restoreItem = new MenuItem("Восстановить отметку");
+            restoreItem.setOnAction(event -> {
+                DbProc.restoreMark(row.getItem().getRecordId() ,row.getItem().getVehicle());
             });
 
             // Элемент выпадающего меню для администратора - "ДОБАВИТЬ ОТМЕТКУ".
@@ -336,7 +401,9 @@ public class MainController {
                 dummyItem.setText(row.getItem().getTimestamp());
                 // Создаем меню с учетом прав текущего пользователя.
                 switch (currentUserType){
-                    case ADMIN: rowMenu.getItems().addAll(addItem,separatorMenuItem,removeItem);
+                    case ADMIN:
+                        if (row.getItem().isDeleted()) rowMenu.getItems().addAll(addItem,separatorMenuItem,restoreItem);
+                        else rowMenu.getItems().addAll(addItem,separatorMenuItem,removeItem);
                         break;
                     case USER:  rowMenu.getItems().addAll(dummyItem);
                         break;
@@ -358,19 +425,39 @@ public class MainController {
         todayVehiclesStatistic.setRowFactory((Callback<TableView<VehicleItem>, TableRow<VehicleItem>>) tableView -> {
                     final TableRow<VehicleItem> row = new TableRow<>();
                     final ContextMenu rowMenu = new ContextMenu();
-                    final SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
+                    final SeparatorMenuItem separator1 = new SeparatorMenuItem();
+                    final SeparatorMenuItem separator2 = new SeparatorMenuItem();
 
-                    // Элемент выпадающего меню для администратора - "УДАЛИТЬ РЕЙСЫ".
-                    final MenuItem removeItem = new MenuItem("Удалить рейсы (текущая дата)");
-                    removeItem.setOnAction(event -> {
-                        DbProc.clearTodayMarks(row.getItem().getVehicle());
-
+                    // Элемент выпадающего меню для администратора - "УДАЛИТЬ РЕЙСЫ - ВЫБРАННЫЙ ДИАПАЗОН ДАТ".
+                    final MenuItem removeItemDateRange = new MenuItem("Удалить рейсы (диапазон дат)");
+                    removeItemDateRange.setOnAction(event -> {
+                        DbProc.clearDateRangeMarks(row.getItem().getVehicle(), getUserSelectedDateRange());
                     });
+
+                    // Элемент выпадающего меню для администратора - "УДАЛИТЬ РЕЙСЫ - ТЕКУЩАЯ ДАТА".
+                    final MenuItem removeItemCurrDate = new MenuItem("Удалить рейсы (текущая дата)");
+                    removeItemCurrDate.setOnAction(event -> {
+                        DbProc.clearTodayMarks(row.getItem().getVehicle());
+                    });
+
+                    // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ РЕЙСЫ - ВЫБРАННЫЙ ДИАПАЗОН ДАТ".
+                    final MenuItem restoreDateRangeMarks = new MenuItem("Восстановить рейсы (диапазон дат)");
+                    restoreDateRangeMarks.setOnAction(event -> {
+                        DbProc.restoreDateRangeMarks(row.getItem().getVehicle(), getUserSelectedDateRange());
+                    });
+
+                    // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ РЕЙСЫ - ТЕКУЩАЯ ДАТА".
+                    final MenuItem restoreItemCurrDate = new MenuItem("Восстановить рейсы (текущая дата)");
+                    restoreItemCurrDate.setOnAction(event -> {
+                        DbProc.restoreTodayMarks(row.getItem().getVehicle());
+                    });
+
                     // Элемент выпадающего меню для администратора - "ДОБАВИТЬ ОТМЕТКУ".
                     final MenuItem addItem = new MenuItem("Добавить отметку");
                     addItem.setOnAction(event -> {
                         addMarkManually(row.getItem().getVehicle());
                     });
+
                     // Элемент выпадающего меню для обычного пользователя.
                     final MenuItem dummyItem = new MenuItem( "dummy");
                         dummyItem.setOnAction(event -> {
@@ -386,7 +473,14 @@ public class MainController {
                         dummyItem.setText(row.getItem().getVehicle());
                         // Создаем меню с учетом прав текущего пользователя.
                         switch (currentUserType){
-                            case ADMIN: rowMenu.getItems().addAll(addItem, separatorMenuItem, removeItem);
+                            case ADMIN: rowMenu.getItems().addAll(
+                                    addItem,
+                                    separator1,
+                                    restoreItemCurrDate,
+                                    restoreDateRangeMarks,
+                                    separator2,
+                                    removeItemCurrDate,
+                                    removeItemDateRange);
                                 break;
                             case USER:  rowMenu.getItems().addAll(dummyItem);
                                 break;
@@ -426,7 +520,7 @@ public class MainController {
             // Проверяем наличие подключения еще раз.
             if (db.isConnected()){
                 // Применяем новый статус к ТС.
-                boolean result = db.setVehicleState(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
+                boolean result = db.setVehicleBlocked(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
 
                 // Если SQL-запрос выполнен с ошибкой - возвращаем предыдущий статус.
                 if (!result) {newStatus = event.getOldValue();}
@@ -481,8 +575,12 @@ public class MainController {
 
         // Создаем слушателя на изменение текущего аккаунта.
         Broadcast.setAccountInterface(newUser -> {
-            currentUserType = newUser;
-            setupAccountVisualStyle();
+            if (currentUserType != newUser) {
+                currentUserType = newUser;
+                setupAccountVisualStyle();
+                // Обновляем набор данных.
+                requestAllDatasetReload();
+            }
         });
 
 
@@ -746,7 +844,7 @@ public class MainController {
         return dayCellFactory;
     }
 
-    public DbDateRange getUserSelectedDateRange (){
+    DbDateRange getUserSelectedDateRange(){
         DbDateRange dbDateRange = new DbDateRange();
         dbDateRange.setStartDate(datepicker_hidden_start.getValue());
         dbDateRange.setStopDate(datepicker_hidden_stop.getValue());
@@ -757,7 +855,21 @@ public class MainController {
         markDelay.setText(value);
     }
 
-    public void onSetupAction (ActionEvent event){
+    // Реакция на нажатие кнопки "СТАРТ ИНЖЕНЕРНОГО МЕНЮ"
+    public void onMasterSetupRequest(ActionEvent event){
+
+        // Если в настоящий момент текущий пользователь Администратор, то просто запускаем инженерное меню
+        // без вызова диалогового окна для ввода пароля доступа.
+        if (currentUserType == Users.ADMIN){
+            // Если этот запрос был вызван не нажатием на кнопку "Инженерное меню", то возвращаем пользователя User.
+            if (event == null) {
+                changeCurrentUser(Users.USER);
+                return;
+            }
+            // Запускаем окно настроек
+            showMasterSetupWindow();
+            return;
+        }
 
         // Настраиваем поле для ввода пароля.
         final PasswordField passwordPasswordField = new PasswordField();
@@ -780,53 +892,13 @@ public class MainController {
             if ( str != null )
             if ( str.equalsIgnoreCase("eb0a191797624dd3a48fa681d3061212")){
                 Log.println("Запуск инженерного меню ... ");
-                /////////////////////////////
-                // Запускаем окно настроек //
-                /////////////////////////////
-                //FXMLLoader loader = new FXMLLoader(getClass().getResource("../frames/settings.fxml"));
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/frames/settings.fxml"));
-
-                Parent root;
-                try {
-                    root = loader.load();
-                    //SettingsController settingsController = loader.getController();
-                    setupStage = new Stage();
-                    setupStage.getIcons().add(new Image("/images/services-32.png"));
-                    setupStage.setTitle("Настройки сервера базы данных");
-                    setupStage.setScene(new Scene(root, -1, -1));
-
-                    // Событие при открытии окна.
-                    setupStage.setOnShown(event2 -> {
-                        Log.println("Инженерное меню -> открыто.");
-                        // Изменяет текущий аккаунт на "ADMIN".
-                        if (Broadcast.getAccountInterface() != null){
-                            Broadcast.getAccountInterface().wasChanged(Users.ADMIN);
-                        }
-                    });
-                    // Событие при исчезновении окна. Наступает после закрытия.
-                    setupStage.setOnHidden(event23 -> {
-                        Log.println("Инженерное меню -> закрыто.");
-                        // Изменяет текущий аккаунт на "USER".
-                        if (Broadcast.getAccountInterface() != null){
-                            Broadcast.getAccountInterface().wasChanged(Users.USER);
-                        }
-                    });
-                    /*
-                    // Событие при закрытии окна.
-                    setupStage.setOnCloseRequest(event22 -> {
-                        Log.println("Инженерное меню -> закрыто.");
-                        // Изменяет текущий аккаунт на "USER".
-                        if (Broadcast.getAccountInterface() != null){
-                            Broadcast.getAccountInterface().wasChanged(Users.USER);
-                        }
-                    });
-                    */
-                    setupStage.show();
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.println("ОШИБКА! Подробнее:");
-                    Log.println(e.toString());
+                /////////////////////////////////////////////////////////////////////////
+                // Если была нажата "Инженерное меню" -> запускаем окно настроек.
+                if (event != null) {
+                    showMasterSetupWindow();
+                }// В противном случае просто активируем пользователя Admin.
+                else {
+                    changeCurrentUser(Users.ADMIN);
                 }
                 /////////////////////////////////////////////////////////////////////////
             } else {
@@ -842,6 +914,49 @@ public class MainController {
         dialog.getDialogPane().setContent(grid);
 
         dialog.showAndWait();
+    }
+
+    private void showMasterSetupWindow(){
+
+        //FXMLLoader loader = new FXMLLoader(getClass().getResource("../frames/settings.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/frames/settings.fxml"));
+
+        Parent root;
+        try {
+            root = loader.load();
+            //SettingsController settingsController = loader.getController();
+            setupStage = new Stage();
+            setupStage.getIcons().add(new Image("/images/services-32.png"));
+            setupStage.setTitle("Настройки сервера базы данных");
+            setupStage.setScene(new Scene(root, -1, -1));
+
+            // Событие при открытии окна.
+            setupStage.setOnShown(event2 -> {
+                Log.println("Инженерное меню -> открыто.");
+                // Изменяет текущий аккаунт на "ADMIN".
+                changeCurrentUser(Users.ADMIN);
+            });
+            // Событие при исчезновении окна. Наступает после закрытия.
+            setupStage.setOnHidden(event23 -> {
+                Log.println("Инженерное меню -> закрыто.");
+                // Изменяет текущий аккаунт на "USER".
+                changeCurrentUser(Users.USER);
+            });
+            setupStage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.println("ОШИБКА! Подробнее:");
+            Log.println(e.toString());
+        }
+    }
+
+    private void changeCurrentUser(Users user){
+        if (currentUserType != user) {
+            if (Broadcast.getAccountInterface() != null) {
+                Broadcast.getAccountInterface().wasChanged(user);
+            }
+        }
     }
 
     public void onUserSetupAction (ActionEvent event) {
