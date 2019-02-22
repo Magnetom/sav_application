@@ -480,6 +480,26 @@ public class Db {
         MARK_AS_DELETED, MARK_AS_RESTORED, REAL_DELETE
     }
 
+    /* Brief: Обновить комментарий существующей отметки.
+     */
+    public boolean updateMarkComment(String record_id, String newComment){
+
+        if (record_id == null || record_id.isEmpty()) return false;
+
+        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+
+                " SET "+
+                TABLE_MARKS_COLUMNS.COLUMN_COMMENT+"='"+newComment + "' "+
+                " WHERE "+TABLE_MARKS_COLUMNS.COLUMN_ID+"="+record_id + ";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "UPDATE_MARK_COMMENT",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
     /* Brief: Удалить/восстановить все отметки за диапазон дат.
      *
      * Если указан параметр @recordId, все остальные условия отбрасываются.

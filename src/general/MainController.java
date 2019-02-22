@@ -27,6 +27,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -193,6 +194,7 @@ public class MainController {
         if (todayVehiclesMarksLog != null) {
 
             todayVehiclesMarksLog.getColumns().clear();
+            todayVehiclesMarksLog.setEditable(true);
 
             TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Дата/Время");
             TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
@@ -217,8 +219,19 @@ public class MainController {
             // Настройка ячеек: отметки, помеченные как "удаленные" выделяются красным шрифтом во всех столбцах.
             timestampColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
             vehicleColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
-            commentColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
+            //commentColumn.setCellFactory(column -> setupTableCellFactoryMARKS());
             ////////////////////////////////////////////////////////////////////////
+
+            // Вешаем слушателя на изменение содержимого ячейки "ТИП".
+            commentColumn.setEditable(true);
+            commentColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+            commentColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleMark, String> event) -> {
+                VehicleMark item = event.getTableView().getItems().get(event.getTablePosition().getRow());
+                item.setComment(event.getNewValue());
+                //Запись нового значения в БД.
+                Db.getInstance().updateMarkComment(String.valueOf(item.getRecordId()), event.getNewValue());
+            });
+
 
             // Настраиваем контекстное меню.
             setupTodayVehiclesMarksLogContextMenu();
