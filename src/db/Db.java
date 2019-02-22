@@ -199,7 +199,7 @@ public class Db {
         connect();
     }
 
-    public void OnFailReConnect(){
+    public void OnFailReRecover(){
         Log.println("При обращении к базе данных произошла ошибка. Будет произведена попытка восстановить связь.");
         reConnect();
     }
@@ -250,7 +250,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_CAPACITY",e.getMessage(), query);
             return false;
         }
@@ -264,7 +264,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VARIABLES",e.getMessage(), query);
             return false;
         }
@@ -278,7 +278,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "REMOVE_ALL_VEHICLES",e.getMessage(), query);
             return false;
         }
@@ -316,7 +316,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "UPDATE_POPULARITY",e.getMessage(), query);
             return false;
         }
@@ -332,7 +332,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "RESET_ALL_POPULARITY",e.getMessage(), query);
             return false;
         }
@@ -372,7 +372,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "ADD_MARK",e.getMessage(), query);
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             return false;
         }
 
@@ -425,7 +425,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect();
+            OnFailReRecover();
             Log.printerror(TAG_SQL, "TOGGLE_VEHICLE",e.getMessage(), query);
             return false;
         }
@@ -442,7 +442,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "SET_VEHICLE_STATE",e.getMessage(), query);
             return false;
         }
@@ -563,9 +563,30 @@ public class Db {
             updatePopularity(vehicle, popAction);
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             Log.printerror(TAG_SQL, "TOGGLE_MARKS",e.getMessage(), query);
             return false;
+        }
+        return true;
+    }
+
+    // Возвращает TRUE если указанное ТС удалено из БД физически (или же его никогда не было в БД)
+    // или отмечено как удаленное. FALSE в противном случае.
+    public boolean isVehicleDeleted (String vehicle){
+
+        // Получаем список всех ТС (не помеченных на удаление).
+        try {
+            List<VehicleItem> allVehicles  = getAllVehicles(false);
+            if (allVehicles!=null) {
+                // Просматриваем все одобренные ТС (не помеченные на удаление).
+                for (VehicleItem item: allVehicles) {
+                    // Если в этом списке есть искомое ТС, то считаем, что оно не удалено.
+                    if (item.getVehicle().equalsIgnoreCase(vehicle)) return false;
+                }
+            }
+        } catch (SQLException e){
+            OnFailReRecover();
+            return true;
         }
         return true;
     }
@@ -581,10 +602,17 @@ public class Db {
         if(!isConnected()) return null;
 
         ResultSet rs;
+        List<VehicleItem> allVehicles = null;
+
+        // Получаем список всех ТС (не помеченных на удаление).
+        try {
+            allVehicles = getAllVehicles(false);
+        } catch (SQLException e){ OnFailReRecover(); throw e; }
+
 
         String condition = getDateRangeTimestampCondition(dateRange);
 
-        // Если не требуется показывать удаленные ранее отметки, создаем дополнительный фильтр.
+        // Если не требуется показывать удаленные ранее отметки и отметки удаленных ТС, создаем дополнительный фильтр.
         if (!showDeleted) {
             if (!condition.isEmpty()) condition += " AND ";
             condition += TABLE_MARKS_COLUMNS.COLUMN_DELETED+"=0";
@@ -594,22 +622,42 @@ public class Db {
         try {
             String query = "SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" "+condition+";";
             rs = conn.createStatement().executeQuery(query);
-        } catch (SQLException e){
-            OnFailReConnect(); // Пытаемся переконнектиться.
-            throw e;
-        }
+        } catch (SQLException e){ OnFailReRecover(); throw e; }
+
 
         List<VehicleMark> marksList = new ArrayList<>();
+        // Перебираем все полученные отметки.
         while (rs.next()) {
+
+            String vehicle  = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_VEHICLE);
+
+            //////////////////////////////////////////////////////////////////////////////////////////
+            // ФИЛЬТР:
+            // Если требуется отфильтовать отметки, помеченные на удаление или отметки, которые
+            // принадлежат помеченным на удаление ТС.
+            boolean isVehicleDeleted = true;
+            if (allVehicles != null) {
+                // Просматриваем все одобренные ТС (не помеченные на удаление).
+                // Если в этом списке есть отметка, сделанная текущей ТС, то пропускаем эту отметку.
+                for (VehicleItem item: allVehicles) {
+                    if (item.getVehicle().equalsIgnoreCase(vehicle)) isVehicleDeleted = false;
+                }
+            } else
+                isVehicleDeleted = false;
+            //////////////////////////////////////////////////////////////////////////////////////////
+
+            // Если текущая отметка не прошда фильтр, то пропускаем ее и переходим к следующей.
+            if (isVehicleDeleted && !showDeleted) continue;
+
             //String timestamp = getHHMMFromStringTimestamp(rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP));
             String timestamp = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP);
-            String vehicle   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_VEHICLE);
-            String request = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
+            String request   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
             boolean deleted  = rs.getBoolean(TABLE_MARKS_COLUMNS.COLUMN_DELETED);
             String comment   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_COMMENT);
             int    recordId  = rs.getInt(TABLE_MARKS_COLUMNS.COLUMN_ID);
 
             VehicleMark mark = new VehicleMark(timestamp, vehicle, request, deleted, recordId, comment);
+            mark.setVehicleDeleted(isVehicleDeleted);
             marksList.add(mark);
         }
         return marksList;
@@ -630,7 +678,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES + " "+condition + ";");
         } catch (SQLException e){
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -657,7 +705,7 @@ public class Db {
         try {
             rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+" WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+"='1'");
         } catch (SQLException e){
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             throw e;
         }
 
@@ -685,20 +733,35 @@ public class Db {
         List<String> blackList;
         try {
             blackList = getBlockedVehicles();
-        } catch (SQLException e){
-            OnFailReConnect(); // Пытаемся переконнектиться.
-            throw e;
-        }
+        } catch (SQLException e){ OnFailReRecover(); throw e; }
+
+        // Получаем список всех ТС (не помеченных на удаление).
+        List<VehicleItem> allVehicles;
+        try {
+            allVehicles = getAllVehicles(false);
+        } catch (SQLException e){ OnFailReRecover(); throw e; }
 
         //////////////////////////////////////////////////////////////////////////////////////
         boolean exist;
 
         // Создаем экземпляр класса списка статистики.
-        List<VehicleItem> list = new ArrayList<>();
+        List<VehicleItem> statisticList = new ArrayList<>();
 
         for (VehicleMark mark: markList) {
+            boolean approved = false;
+
+            // Если текущая отметка помечена как удаленная, то не учитываем ее в статистике.
+            if (mark.isDeleted()) continue;
+            // Если текущее ТС, которое совершило отметку, находится в списке "помеченных на удаление" ТС, то также не
+            // учитываем такую отметку в статистике.
+            for (VehicleItem item: allVehicles) {
+                if (item.getVehicle().equalsIgnoreCase(mark.getVehicle()) ) approved = true;
+            }
+            if (!approved) continue;
+
             exist = false;
-            for (VehicleItem item: list) {
+            for (VehicleItem item: statisticList) {
+
                 // если ТС уже есть в итоговом списке, увеличиваем счетчик кругов и переходим к следующей итерации.
                 if (item.getVehicle().equalsIgnoreCase(mark.getVehicle())){
                     item.setLoopsCnt(item.getLoopsCnt()+1);
@@ -716,12 +779,12 @@ public class Db {
                     if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
                 }
                 // Добавляем новое ТС в новый список.
-                list.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, false,0,false) );
+                statisticList.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, false,0,false) );
             }
         }
         //////////////////////////////////////////////////////////////////////////////////////
 
-        return list;
+        return statisticList;
     }
 
     /* Установить статус глобальной блокировки отметок: TRUE - все отметки заблокированы.
@@ -751,7 +814,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "SET_SYS_VARIABLE",e.getMessage(), query);
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             return false;
         }
         return true;
@@ -774,7 +837,7 @@ public class Db {
         } catch (SQLException e) {
             e.printStackTrace();
             Log.printerror(TAG_SQL, "GET_SYS_VARIABLE",e.getMessage(), query);
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             return null;
         }
     }
@@ -801,7 +864,7 @@ public class Db {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            OnFailReConnect(); // Пытаемся переконнектиться.
+            OnFailReRecover(); // Пытаемся переконнектиться.
             return false;
         }
         return false;
@@ -825,9 +888,41 @@ public class Db {
         if (isConnected()) conn.createStatement().executeQuery(query);
     }
 
+    public boolean removeCapacity(String recordId){
+        String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+" WHERE id="+recordId+";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            OnFailReRecover();
+            Log.printerror(TAG_SQL, "REMOVE_CAPACITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean addNewCapacity(VehicleCapacityItem item){
+
+        String query = "INSERT INTO "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+
+                " ("+TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+","+TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+","+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+
+                ") VALUES ('"+item.getType()+"','"+item.getCapacity()+ "','"+item.getComment()+"');";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "ADD_NEW_CAPACITY",e.getMessage(), query);
+            OnFailReRecover();
+            return false;
+        }
+        return true;
+    }
+
     public boolean updateCapacity(VehicleCapacityItem item){
 
         if (item == null) return false;
+
+        // Если не указан уникальный номер записи, то считаем, что требуется добавить новую строку в БД.
+        if (item.getId() == -1) return addNewCapacity(item);
 
         String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+
                 " SET "+

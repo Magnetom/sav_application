@@ -7,6 +7,9 @@ public class VehicleMark {
     private String  timestamp;
     private String  request;
     private boolean deleted;
+
+
+    private boolean vehicleDeleted;
     private String  comment;
 
     public boolean isDeleted() { return deleted; }
@@ -42,4 +45,12 @@ public class VehicleMark {
 
     public String getTimestamp(){return timestamp;}
     public void   setTimestamp(String t) {timestamp=t;}
+
+    public boolean isVehicleDeleted() {
+        return vehicleDeleted;
+    }
+
+    public void setVehicleDeleted(boolean vehicleDeleted) {
+        this.vehicleDeleted = vehicleDeleted;
+    }
 }

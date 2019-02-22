@@ -25,8 +25,6 @@
                     <content>
                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                           <children>
-                             <Button fx:id="saveButton1" mnemonicParsing="false" text="Применить" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="80.0" />
-                             <Button fx:id="closeButton1" mnemonicParsing="false" text="Закрыть" AnchorPane.bottomAnchor="10.0" AnchorPane.rightAnchor="10.0" />
                              <Button id="runScriptButton" fx:id="runScriptButton" layoutX="14.0" layoutY="14.0" mnemonicParsing="false" text="Выполнить скрипт" />
                           </children>
                        </AnchorPane>

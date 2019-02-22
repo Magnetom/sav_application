@@ -247,7 +247,7 @@ public class Main extends Application {
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, null/*markList*/));
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, /*null*/markList));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
 

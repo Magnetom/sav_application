@@ -13,6 +13,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import utils.Auxiliary;
 
 import java.util.List;
 
@@ -22,11 +23,11 @@ public class UserSettings {
 
     @FXML
     public void initialize() {
-        initMainTab();
+        initCapacityTab();
     }
 
 
-    private void initMainTab(){
+    private void initCapacityTab(){
 
         // Настраиваем таблицу с типами вместимостей.
         capacityTable.getColumns().clear();
@@ -40,7 +41,40 @@ public class UserSettings {
         vehicleCapacityColumn.setCellValueFactory(new PropertyValueFactory<>("capacity"));
         commentColumn.setCellValueFactory        (new PropertyValueFactory<>("comment"));
 
-        capacityTypeColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        //capacityTypeColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
+        ///////////////////////////////////////////////////////////////////////
+        // Следующий код выделяет серым цветом текст "новый тип" в поле "тип" вновь созданной колонки.
+        capacityTypeColumn.setCellFactory(tc -> {
+            TextFieldTableCell<VehicleCapacityItem, String> cell = new TextFieldTableCell<VehicleCapacityItem, String>(){
+
+                @Override
+                public void updateItem(String item, boolean empty) {
+                    super.updateItem(item,empty);
+                    if (item == null || empty) setText("");
+                    else {
+                        setText(item);
+                        TableRow<VehicleCapacityItem> currentRow = getTableRow();
+                        if (currentRow != null) {
+                            VehicleCapacityItem capItem = currentRow.getItem();
+                            if (capItem != null) {
+                                if (capItem.getId() == -1) {
+                                    setStyle("-fx-text-fill: lightgrey; -fx-alignment: center");
+                                    setText("новый тип");
+                                }
+                                else
+                                    setStyle("-fx-text-fill: black; -fx-alignment: center-left");
+                            }
+                        }
+                    }
+                }
+            };
+
+            cell.setConverter(Auxiliary.getStdStringConverter());
+            return cell ;
+        });
+        ///////////////////////////////////////////////////////////////////////
+
         vehicleCapacityColumn.setCellFactory(TextFieldTableCell.forTableColumn(new StringConverter<Integer>() {
             @Override
             public String toString(Integer object) {
@@ -77,24 +111,27 @@ public class UserSettings {
         capacityTypeColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleCapacityItem, String> event) -> {
             VehicleCapacityItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
             item.setType(event.getNewValue());
-            //Запись нового значения в БД.
+            // Запись нового значения в БД или обновление существующей записи в БД.
             Db.getInstance().updateCapacity(item);
+            updateCapacityTab();
         });
 
         // Вешаем слушателя на изменение содержимого ячейки "ГРУЗОВМЕСТИМОСТЬ".
         vehicleCapacityColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleCapacityItem, Integer> event) -> {
             VehicleCapacityItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
             item.setCapacity(event.getNewValue());
-            //Запись нового значения в БД.
+            // Запись нового значения в БД или обновление существующей записи в БД.
             Db.getInstance().updateCapacity(item);
+            updateCapacityTab();
         });
 
         // Вешаем слушателя на изменение содержимого ячейки "КОММЕНТАРИЙ".
         commentColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleCapacityItem, String> event) -> {
             VehicleCapacityItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
             item.setComment(event.getNewValue());
-            //Запись нового значения в БД.
+            // Запись нового значения в БД или обновление существующей записи в БД.
             Db.getInstance().updateCapacity(item);
+            updateCapacityTab();
         });
 
         // Добавляем новые колонки.
@@ -122,13 +159,17 @@ public class UserSettings {
             // Элемент выпадающего меню для администратора - "УДАЛИТЬ ЭЛЕМЕНТ".
             final MenuItem removeItem = new MenuItem("Удалить элемент!");
             removeItem.setOnAction(event -> {
-                //DbProc.clearMark(row.getItem().getRecordId());
+                Db.getInstance().removeCapacity(String.valueOf(row.getItem().getId()));
+                capacityTable.getItems().remove(row.getItem());
             });
 
             // Элемент выпадающего меню для администратора - "ДОБАВИТЬ НОВЫЙ ЭЛЕМЕНТ".
             final MenuItem addItem = new MenuItem("Добавить новый элемент");
             addItem.setOnAction(event -> {
-                //addMarkManually(row.getItem().getVehicle());
+                // Запись нового значения в БД или обновление существующей записи в БД.
+                //Db.getInstance().updateCapacity(new VehicleCapacityItem(-1,"SCANIA XT", 0, ""));
+                capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, ""));
+                capacityTable.getSelectionModel().selectLast();
             });
 
             rowMenu.getItems().addAll(addItem,separatorMenuItem,removeItem);
@@ -150,14 +191,19 @@ public class UserSettings {
                     VehicleCapacityItem itemSelected = (VehicleCapacityItem)capacityTable.getSelectionModel().getSelectedItem();
                     // Только если двойной щелчок был совершен на пустом месте, то добавляем новую строку
                     if (itemSelected == null) {
-                        capacityTable.getItems().add(new VehicleCapacityItem(-1,"SCANIA XT", 0, ""));
+                        capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, ""));
                         capacityTable.getSelectionModel().selectLast();
-                        System.out.println("Added new empty row...");
+                        //System.out.println("Added new empty row...");
                     }
                 }
             }
         });
 
+        // Обновление всех данных.
+        updateCapacityTab();
+    }
+
+    private void updateCapacityTab(){
         // Загрузка и отображение всех элементов таблицы БД - CAPACITY.
         List<VehicleCapacityItem> capList = Db.getInstance().getCapacities();
         if (capList != null) {
@@ -165,6 +211,5 @@ public class UserSettings {
             capacityTable.setItems(capacityListObservable);
         }
     }
-
 
 }

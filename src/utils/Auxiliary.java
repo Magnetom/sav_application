@@ -1,5 +1,7 @@
 package utils;
 
+import javafx.util.StringConverter;
+
 import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.Random;
@@ -53,6 +55,20 @@ public class Auxiliary {
         String s1 = Integer.valueOf(src).toString();
         if (s1.length() == 1) s1 = "0" + s1;
         return s1;
+    }
+
+    public static StringConverter<String> getStdStringConverter(){
+        return new StringConverter<String>() {
+            @Override
+            public String toString(String object) {
+                return object;
+            }
+
+            @Override
+            public String fromString(String string) {
+                return string;
+            }
+        };
     }
 }
 

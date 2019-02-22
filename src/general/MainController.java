@@ -295,7 +295,13 @@ public class MainController {
                     TableRow<VehicleMark> currentRow = getTableRow();
                     if (currentRow != null) {
                         VehicleMark markItem = currentRow.getItem();
-                        if (markItem != null) if (markItem.isDeleted()) setTextFill(Color.RED); else setTextFill(Color.BLACK);
+                        if (markItem != null) {
+                            if (markItem.isVehicleDeleted()) setTextFill(Color.ORANGE);
+                            else
+                            if (markItem.isDeleted()) setTextFill(Color.RED);
+                            else
+                                setTextFill(Color.BLACK);
+                        }
                     }
                 }
             }
@@ -314,7 +320,7 @@ public class MainController {
                     TableRow<VehicleItem> currentRow = getTableRow();
                     if (currentRow != null) {
                         VehicleItem markItem = currentRow.getItem();
-                        if (markItem != null) if (markItem.isDeleted()) setTextFill(Color.RED); else setTextFill(Color.BLACK);
+                        if (markItem != null) if (markItem.isDeleted()) setTextFill(Color.ORANGE); else setTextFill(Color.BLACK);
                     }
                 }
             }
