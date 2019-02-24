@@ -123,6 +123,7 @@ public class SettingsController {
                 // Если скрипт не пуст, то выполняем его.
                 if (!script.isEmpty()){
                     Db db = Db.getInstance();
+                    //if (db.executeScript("SET FOREIGN_KEY_CHECKS=0;\nSET FOREIGN_KEY_CHECKS=1;"/*script*/)){
                     if (db.executeScript(script)){
                         Log.println("Скрипт выполнен - [ОК].");
                     } else

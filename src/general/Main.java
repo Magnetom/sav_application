@@ -241,13 +241,17 @@ public class Main extends Application {
                                     case ADMIN:showDeletedItems = true;  break; // Для пользователя ADMIN отображаем.
                                 }
 
+                                // Получаем список всех грузовместимостей
+                                //final ObservableList<VehicleCapacityItem> capacityList = FXCollections.observableArrayList(db.getInstance().getCapacity(null));
+
+
                                 // Получаем список всех отметок за сегодняшнюю дату.
                                 final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, showDeletedItems));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, /*null*/markList));
+                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
 

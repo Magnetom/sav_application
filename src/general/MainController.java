@@ -9,6 +9,7 @@ import db.DbProc;
 import dialogs.datetime.DateTimeDialog;
 import enums.Users;
 import frames.SettingsController;
+import frames.VehicleCapacityItem;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -44,6 +45,7 @@ import utils.DateTime;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 
 import static utils.DateTime.*;
 import static utils.Hash.MD5;
@@ -89,6 +91,8 @@ public class MainController {
 
     private static SettingsController settingsController;
 
+    TableColumn <VehicleItem, VehicleCapacityItem>  capacityColumn;
+
     /* Конструктор класса */
     public  MainController(){
 
@@ -130,7 +134,9 @@ public class MainController {
         // Очищается лог событий.
         if (debugLogArea != null) debugLogArea.setText("");
 
-        // Настраиваем список подробной статистики по каждому госномеру.
+        /////////////////////////////////////////////////////////////////////////////////
+        // Настраиваем список подробной СТАТИСТИКИ ПО КАЖДОМУ ГОСНОМЕРУ.
+        /////////////////////////////////////////////////////////////////////////////////
         if (todayVehiclesStatistic != null){
             todayVehiclesStatistic.getColumns().clear();
 
@@ -190,7 +196,9 @@ public class MainController {
             todayVehiclesStatistic.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
         }
 
-        // Настраивается лог отметок.
+        /////////////////////////////////////////////////////////////////////////////////
+        // Настраивается ЛОГ ОТМЕТОК.
+        /////////////////////////////////////////////////////////////////////////////////
         if (todayVehiclesMarksLog != null) {
 
             todayVehiclesMarksLog.getColumns().clear();
@@ -240,7 +248,9 @@ public class MainController {
             todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn, commentColumn);
         }
 
-        // Настраиваем отображение списока всех госномеров.
+        /////////////////////////////////////////////////////////////////////////////////
+        // Настраиваем отображение СПИСОКА ВСЕХ ГОСНОМЕРОВ.
+        /////////////////////////////////////////////////////////////////////////////////
         if (allDbVehiclesList != null){
             allDbVehiclesList.getColumns().clear();
             allDbVehiclesList.setEditable(true);
@@ -248,13 +258,16 @@ public class MainController {
             TableColumn <VehicleItem, Object>   vehicleColumn    = new TableColumn<>("Госномер");
             TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус блокировки");
             TableColumn <VehicleItem, Object>   popularityColumn = new TableColumn<>("Всего рейсов");
+                                                capacityColumn   = new TableColumn<>("Тип");
 
             vehicleColumn.setMinWidth(90);
             statusColumn.setMinWidth(125);
             popularityColumn.setMinWidth(90);
+            capacityColumn.setMinWidth(90);
 
             popularityColumn.setStyle("-fx-alignment: CENTER;");
             statusColumn.setStyle("-fx-alignment: CENTER;");
+            capacityColumn.setStyle("-fx-alignment: CENTER;");
 
             // Defines how to fill data for each cell.
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
@@ -269,6 +282,11 @@ public class MainController {
             /////////////////////////////////////////////////////////////////////////////
             setupStatusComboBox(statusColumn);
 
+            /////////////////////////////////////////////////////////////////////////////
+            // Делаем комбо-бокс "Грузовместимость" редактируемым и вешаем на него слушателя.
+            /////////////////////////////////////////////////////////////////////////////
+            //setupCapacityComboBox(capacityColumn);
+
             /////////////////////////////////////////////////////////////////////////
             // Настройка ячеек: отметки, помеченные как "удаленные" выделяются красным шрифтом во всех столбцах.
             vehicleColumn.setCellFactory(column -> setupTableCellFactoryVEHICLES());
@@ -279,7 +297,7 @@ public class MainController {
             setupVehiclesListContextMenu();
 
             // Добавляем новые колонки.
-            allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn);
+            allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn, capacityColumn);
         }
     }
 
@@ -515,10 +533,46 @@ public class MainController {
                 });
     }
 
+
+    /////////////////////////////////////////////////////////////////////////////
+    // Делаем комбо-бокс "Грузовместимость" редактируемым и вешаем на него слушателя.
+    /////////////////////////////////////////////////////////////////////////////
+    private void setupCapacityComboBox( TableColumn <VehicleItem, VehicleCapacityItem>  column){
+        if (column == null) return;
+
+        List<VehicleCapacityItem> capList = Db.getInstance().getCapacity(null);
+        if (capList == null) capList = new ArrayList<>();
+        // Получаем из БД полный актуальный список грузовместимостей.
+        ObservableList<VehicleCapacityItem> capacityItemsList = FXCollections.observableArrayList(capList);
+
+        column.setCellValueFactory(param -> {
+            VehicleItem vehicle = param.getValue();
+            VehicleCapacityItem capacity = DbProc.getCapacity(capacityItemsList, vehicle);
+            return new SimpleObjectProperty<>(capacity);
+        });
+
+        column.setCellFactory(ComboBoxTableCell.forTableColumn(capacityItemsList));
+
+        column.setOnEditCommit((TableColumn.CellEditEvent<VehicleItem, VehicleCapacityItem> event) -> {
+            TablePosition<VehicleItem, VehicleCapacityItem> pos = event.getTablePosition();
+
+            VehicleCapacityItem newCapItem  = event.getNewValue();
+            VehicleItem vehicle = event.getTableView().getItems().get(pos.getRow());
+
+            // Сохраняем новое значение грузовместимости в БД.
+            DbProc.updateVehicleCapacity(vehicle, newCapItem);
+
+            // Сообщаем верхнему уровню об изменении набора данных или изменении параметров выборки.
+            requestAllDatasetReload();
+        });
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
+    /////////////////////////////////////////////////////////////////////////////
     private void setupStatusComboBox(TableColumn <VehicleItem, Statuses> column){
-        /////////////////////////////////////////////////////////////////////////////
-        // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
-        /////////////////////////////////////////////////////////////////////////////
+
         ObservableList<Statuses> statusList = FXCollections.observableArrayList(Statuses.values());
 
         column.setCellValueFactory(param -> {
@@ -1014,6 +1068,9 @@ public class MainController {
 
     void printAllVehicles(ObservableList<VehicleItem> list){
         if (allDbVehiclesList != null){
+
+            setupCapacityComboBox(capacityColumn);
+
             // Заполняем таблицу данными.
             allDbVehiclesList.setItems(list);
         }

@@ -21,11 +21,11 @@ import static utils.Encrypt.decode;
 
 public class Db {
 
-    public static String TAG_SQL = "SQL";
-    public static String TAG_DB  = "DB";
+    public  static String TAG_SQL = "SQL";
+    private static String TAG_DB  = "DB";
 
-    public static final int    DB_VERSION_I = 2;
-    public static final String DB_VERSION_S = Auxiliary.alignTwo(DB_VERSION_I);
+    private static final int    DB_VERSION_I = 2;
+    private static final String DB_VERSION_S = Auxiliary.alignTwo(DB_VERSION_I);
 
     ////////////////////////////////////////////////////////
     // Метаданные БД.
@@ -41,72 +41,74 @@ public class Db {
 
     // Таблица TABLE_MARKS_COLUMNS содержит информацию о всех отметках.
     public static final class TABLE_MARKS_COLUMNS {
-        public static final String COLUMN_ID         = "id";
-        public static final String COLUMN_VEHICLE    = "vehicle";
-        public static final String COLUMN_TIMESTAMP  = "time";
-        public static final String COLUMN_MAC        = "mac";
-        public static final String COLUMN_REQUEST    = "request";
-        public static final String COLUMN_DELETED    = "deleted";
-        public static final String COLUMN_COMMENT    = "comment";
+        static final String COLUMN_ID         = "id";
+        static final String COLUMN_VEHICLE    = "vehicle";
+        static final String COLUMN_TIMESTAMP  = "time";
+        static final String COLUMN_MAC        = "mac";
+        static final String COLUMN_REQUEST    = "request";
+        static final String COLUMN_DELETED    = "deleted";
+        static final String COLUMN_COMMENT    = "comment";
 
-        public static final int ID_COLUMN_ID         = 0;
-        public static final int ID_COLUMN_VEHICLE    = 1;
-        public static final int ID_COLUMN_TIMESTAMP  = 2;
-        public static final int ID_COLUMN_MAC        = 3;
-        public static final int ID_COLUMN_REQUEST    = 4;
-        public static final int ID_COLUMN_DELETED    = 5;
-        public static final int ID_COLUMN_COMMENT    = 6;
+        static final int ID_COLUMN_ID         = 0;
+        static final int ID_COLUMN_VEHICLE    = 1;
+        static final int ID_COLUMN_TIMESTAMP  = 2;
+        static final int ID_COLUMN_MAC        = 3;
+        static final int ID_COLUMN_REQUEST    = 4;
+        static final int ID_COLUMN_DELETED    = 5;
+        static final int ID_COLUMN_COMMENT    = 6;
     }
 
     // Таблица TABLE_VEHICLES_COLUMNS содержит список введенных гос. номеров и их популярность.
     public static final class TABLE_VEHICLES_COLUMNS {
-        public static final String COLUMN_ID         = "id";
-        public static final String COLUMN_VEHICLE    = "vehicle";
-        public static final String COLUMN_POPULARITY = "popularity";
-        public static final String COLUMN_BLOCKED    = "blocked";
-        public static final String COLUMN_DELETED    = "deleted";
-        public static final String COLUMN_CAPACITY   = "capacity";
+        static final String COLUMN_ID         = "id";
+        static final String COLUMN_VEHICLE    = "vehicle";
+        static final String COLUMN_POPULARITY = "popularity";
+        static final String COLUMN_BLOCKED    = "blocked";
+        static final String COLUMN_DELETED    = "deleted";
+        static final String COLUMN_CAPACITY   = "capacity";
 
-        public static final int ID_COLUMN_ID          = 0;
-        public static final int ID_COLUMN_VEHICLE     = 1;
-        public static final int ID_COLUMN_POPULARITY  = 2;
-        public static final int ID_COLUMN_BLOCKED     = 3;
-        public static final int ID_COLUMN_CAPACITY    = 4;
+        static final int ID_COLUMN_ID          = 0;
+        static final int ID_COLUMN_VEHICLE     = 1;
+        static final int ID_COLUMN_POPULARITY  = 2;
+        static final int ID_COLUMN_BLOCKED     = 3;
+        static final int ID_COLUMN_CAPACITY    = 4;
     }
 
     // Таблица TABLE_VARIABLES_COLUMNS содержит список системных переменных.
     public static final class TABLE_VARIABLES_COLUMNS {
-        public static final String COLUMN_ID    = "id";
-        public static final String COLUMN_NAME  = "name";
-        public static final String COLUMN_VALUE = "value";
+        static final String COLUMN_ID    = "id";
+        static final String COLUMN_NAME  = "name";
+        static final String COLUMN_VALUE = "value";
 
-        public static final int ID_COLUMN_ID       = 0;
-        public static final int ID_COLUMN_NAME     = 1;
-        public static final int ID_COLUMN_VALUE    = 2;
+        static final int ID_COLUMN_ID       = 0;
+        static final int ID_COLUMN_NAME     = 1;
+        static final int ID_COLUMN_VALUE    = 2;
     }
 
     // Таблица TABLE_VARIABLES_ROWS содержит список системных переменных.
     public static final class TABLE_VARIABLES_ROWS {
         // Системны переменные
-        public static final String SYS_VAR_CONFIGURED       = "configured";
-        public static final String SYS_VAR_DATASET          = "dataset";
-        public static final String SYS_VAR_SW_VERSION       = "sw_version";
-        public static final String SYS_VAR_DB_VERSION       = "db_version";
-        public static final String SYS_VAR_MARK_DELAY       = "mark_delay";
-        public static final String SYS_VAR_GLOBAL_BLOCKED   = "global_blocked";
+        private static final String SYS_VAR_CONFIGURED       = "configured";
+        private static final String SYS_VAR_DATASET          = "dataset";
+        public  static final String SYS_VAR_SW_VERSION       = "sw_version";
+        private static final String SYS_VAR_DB_VERSION       = "db_version";
+        public  static final String SYS_VAR_MARK_DELAY       = "mark_delay";
+        public  static final String SYS_VAR_GLOBAL_BLOCKED   = "global_blocked";
     }
 
     // Таблица TABLE_VEHICLES_COLUMNS содержит список введенных гос. номеров и их популярность.
     public static final class TABLE_CAPACITY_COLUMNS {
-        public static final String COLUMN_ID         = "id";
-        public static final String COLUMN_TYPE       = "type";
-        public static final String COLUMN_CAPACITY   = "capacity";
-        public static final String COLUMN_COMMENT    = "comment";
+        static final String COLUMN_ID         = "id";
+        static final String COLUMN_TYPE       = "type";
+        static final String COLUMN_CAPACITY   = "capacity";
+        static final String COLUMN_COST       = "cost";
+        static final String COLUMN_COMMENT    = "comment";
 
-        public static final int ID_COLUMN_ID         = 0;
-        public static final int ID_COLUMN_TYPE       = 1;
-        public static final int ID_COLUMN_CAPACITY   = 2;
-        public static final int ID_COLUMN_COMMENT    = 3;
+        static final int ID_COLUMN_ID         = 0;
+        static final int ID_COLUMN_TYPE       = 1;
+        static final int ID_COLUMN_CAPACITY   = 2;
+        static final int ID_COLUMN_COST       = 3;
+        static final int ID_COLUMN_COMMENT    = 4;
     }
 
     ////////////////////////////////////////////////////////
@@ -117,7 +119,7 @@ public class Db {
     private static final String DB_FALSE = "0";
     ////////////////////////////////////////////////////////
     private static final int   DEFAULT_MARK_DELAY_MIN = 15;
-    public static final String DEFAULT_MARK_DELAY_MIN_S = Integer.valueOf(DEFAULT_MARK_DELAY_MIN).toString();
+    private static final String DEFAULT_MARK_DELAY_MIN_S = Integer.valueOf(DEFAULT_MARK_DELAY_MIN).toString();
     ////////////////////////////////////////////////////////
 
     private Connection conn = null;
@@ -155,11 +157,16 @@ public class Db {
         //if (!connect()) disconnect();
      }
 
+     private boolean nullConnRecoverFail(){
+         Log.println("Соединение с базой данных уже установлено ранее. Переподключение не требуется.");
+         return false;
+     }
+
     // Подключиться к предопределенной базе данных.
     public void connect(){
         Log.println("Попытка установить подключение к базе данных ...");
         if (conn != null) {
-            Log.println("Соединение с базой данных уже установлено ранее. Переподключение не требуется.");
+            nullConnRecoverFail();
             return;
         }
         new Thread(() -> {
@@ -168,7 +175,8 @@ public class Db {
                 String serverName = CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT;
                 String userName = decode("595752746157343D");
                 String password = decode("62586C7A635778685A47317062673D3D");
-                String url = "jdbc:MySQL://" + serverName;
+                //String url = "jdbc:MySQL://" + serverName;
+                String url = "jdbc:MySQL://" + serverName+"?autoReconnect=true&allowMultiQueries=true";
                 conn = DriverManager.getConnection(url, userName, password);
                 Log.println("Соединение с базой данных успешно установлено.");
 
@@ -245,6 +253,8 @@ public class Db {
 
     // Удаляются все грузовместимости.
     private Boolean removeAllCapacity() {
+        if (conn == null) return nullConnRecoverFail();
+
         String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+";";
         try {
             conn.createStatement().executeUpdate(query);
@@ -259,6 +269,7 @@ public class Db {
 
     // Удаляются все переменные.
     private Boolean removeAllVariables() {
+        if (conn == null) return nullConnRecoverFail();
         String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VARIABLES+";";
         try {
             conn.createStatement().executeUpdate(query);
@@ -273,6 +284,7 @@ public class Db {
 
     // Очистить список ТС.
     public Boolean removeAllVehicles() {
+        if (conn == null) return nullConnRecoverFail();
         String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+";";
         try {
             conn.createStatement().executeUpdate(query);
@@ -349,6 +361,7 @@ public class Db {
                     @Nullable String timestamp,
                     @Nullable String comment){
 
+        if (conn == null) return nullConnRecoverFail();
         if (vehicle==null || vehicle.isEmpty()) return false;
         if (comment == null) comment = "";
 
@@ -389,6 +402,8 @@ public class Db {
 
         String query;
         String condition;
+
+        if (conn == null) return nullConnRecoverFail();
 
         // Защита от непреднамеренной очистки всех данных ТС.
         if ( (recordId == null || recordId.isEmpty()) && (vehicle == null || vehicle.isEmpty()) ) return false;
@@ -434,6 +449,7 @@ public class Db {
 
     // Установить статус ТС: TRUE - заблокировано, FALSE - разблокировано/норма.
     public Boolean setVehicleBlocked(String vehicle, boolean blocked){
+        if (conn == null) return nullConnRecoverFail();
         if (vehicle == null || (vehicle.equals("")) ) return false;
         if(!isConnected()) return false;
         Integer st = (blocked)?1:0;
@@ -483,7 +499,7 @@ public class Db {
     /* Brief: Обновить комментарий существующей отметки.
      */
     public boolean updateMarkComment(String record_id, String newComment){
-
+        if (conn == null) return nullConnRecoverFail();
         if (record_id == null || record_id.isEmpty()) return false;
 
         String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+
@@ -517,6 +533,8 @@ public class Db {
                                @NotNull  DataToggleTypes toggleType){
         String query;
         String condition;
+
+        if (conn == null) return nullConnRecoverFail();
 
         if (recordId != null) condition = TABLE_MARKS_COLUMNS.COLUMN_ID+"='"+recordId.toString()+"'";
         else {
@@ -573,6 +591,7 @@ public class Db {
     // Возвращает TRUE если указанное ТС удалено из БД физически (или же его никогда не было в БД)
     // или отмечено как удаленное. FALSE в противном случае.
     public boolean isVehicleDeleted (String vehicle){
+        if (conn == null) return nullConnRecoverFail();
 
         // Получаем список всех ТС (не помеченных на удаление).
         try {
@@ -685,11 +704,13 @@ public class Db {
         List<VehicleItem> vehiclesList = new ArrayList<>();
         while (rs.next()) {
             vehiclesList.add(new VehicleItem(
+                    rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_ID),
                     rs.getString(TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE),
                     0,
                     rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED),
                     rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_DELETED),
                     rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY)+1,
+                    rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY),
                     false));
         }
         return vehiclesList;
@@ -779,7 +800,7 @@ public class Db {
                     if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
                 }
                 // Добавляем новое ТС в новый список.
-                statisticList.add( new VehicleItem(mark.getVehicle(), 1, isBlocked, false,0,false) );
+                statisticList.add( new VehicleItem(-1,mark.getVehicle(), 1, isBlocked, false,0, -1,false) );
             }
         }
         //////////////////////////////////////////////////////////////////////////////////////
@@ -888,7 +909,26 @@ public class Db {
         if (isConnected()) conn.createStatement().executeQuery(query);
     }
 
+    boolean updateVehicleCapacity(String recordId, String capacity){
+        if (conn == null) return nullConnRecoverFail();
+        if (recordId == null || capacity == null) return false;
+
+        String query = "UPDATE "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+
+                " SET "+
+                TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+"='"+capacity + "' "+
+                " WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_ID+"="+recordId + ";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "UPDATE_VEHICLE_CAPACITY",e.getMessage(), query);
+            return false;
+        }
+        return true;
+    }
+
     public boolean removeCapacity(String recordId){
+        if (conn == null) return nullConnRecoverFail();
         String query = "DELETE FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+" WHERE id="+recordId+";";
         try {
             conn.createStatement().executeUpdate(query);
@@ -902,10 +942,18 @@ public class Db {
     }
 
     private boolean addNewCapacity(VehicleCapacityItem item){
-
+        if (conn == null) return nullConnRecoverFail();
         String query = "INSERT INTO "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+
-                " ("+TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+","+TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+","+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+
-                ") VALUES ('"+item.getType()+"','"+item.getCapacity()+ "','"+item.getComment()+"');";
+                " ("+
+                TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+","+
+                TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+","+
+                TABLE_CAPACITY_COLUMNS.COLUMN_COST+","+
+                TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+
+                ") VALUES ('"+
+                item.getType()+"','"+
+                item.getCapacity()+"','"+
+                item.getCost()+"','"+
+                item.getComment()+"');";
         try {
             conn.createStatement().executeUpdate(query);
         } catch (SQLException e) {
@@ -918,7 +966,7 @@ public class Db {
     }
 
     public boolean updateCapacity(VehicleCapacityItem item){
-
+        if (conn == null) return nullConnRecoverFail();
         if (item == null) return false;
 
         // Если не указан уникальный номер записи, то считаем, что требуется добавить новую строку в БД.
@@ -928,6 +976,7 @@ public class Db {
                 " SET "+
                 TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+"='"+item.getType() + "', "+
                 TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+"="+item.getCapacity() + " , "+
+                TABLE_CAPACITY_COLUMNS.COLUMN_COST+"="+item.getCost() + " , "+
                 TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+"='"+item.getComment() + "' "+
                 " WHERE "+TABLE_CAPACITY_COLUMNS.COLUMN_ID+"="+item.getId() + ";";
         try {
@@ -940,21 +989,38 @@ public class Db {
         return true;
     }
 
-    public List<VehicleCapacityItem> getCapacities(){
-
+    /* Brief: Получает весь список грузовместимостей или конкретную грузовместимость.
+     *
+     * Если строковый параметр @recordId не NULL и имеет отличную от нуля длину, то функция вернет
+     * конкретную грузовместимость, если таковая имеется. В противном случае, вернется весь список
+     * грузовместимостей.
+     */
+    public List<VehicleCapacityItem> getCapacity(String recordId){
+        if (conn == null) return null;
         List<VehicleCapacityItem> itemsList = new ArrayList<>();
         ResultSet rs;
+
+        /////////////////////////////////////////////////////////////////////////////
+        // Дополнительное условие для выборки.
+        String condition = "";
+        if (recordId != null && !recordId.isEmpty()){
+            condition = " WHERE " + TABLE_CAPACITY_COLUMNS.COLUMN_ID + "="+recordId;
+        }
+        /////////////////////////////////////////////////////////////////////////////
+
         try {
-            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+";");
+            rs = conn.createStatement().executeQuery("SELECT * FROM "+GENERAL_SCHEMA_NAME+"."+TABLE_CAPACITY+condition+";");
 
             while (rs.next()){
+                // Создаем новый элемент.
                 VehicleCapacityItem item = new VehicleCapacityItem();
-
+                // Заполняем созданный элемент.
                 item.setId(Integer.valueOf(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_ID)));
                 item.setType(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_TYPE));
                 item.setCapacity(Integer.valueOf(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY)));
+                item.setCost(Integer.valueOf(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_COST)));
                 item.setComment(rs.getString(TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT));
-
+                // Добавляем созданный и заполненный элемент в список элементов.
                 itemsList.add(item);
             }
         } catch (SQLException e) {
@@ -1017,6 +1083,7 @@ public class Db {
     private void dbInitCreate(boolean remove) throws Exception{
 
         int result = 0;
+        if (conn == null) {nullConnRecoverFail(); return;}
 
         if (remove) {
             Log.println("Удаление базы данных {aura}.");
@@ -1059,9 +1126,9 @@ public class Db {
                 "(\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+" varchar(18) not null,\n" +
-                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+" int(11) unsigned default '0' not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+" int(11) unsigned default 0 not null,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+" bit default b'0' not null,\n" +
-                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned default '0' not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+" int(11) default -1 not null,\n" +
                 "  constraint vehicle_id_unique\n" +
                 "  unique ("+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+")\n" +
                 ");");
@@ -1073,6 +1140,7 @@ public class Db {
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+" varchar(50) not null,\n" +
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned default '0' not null,\n" +
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COST+" int(11) unsigned default '0' not null,\n" +
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+" varchar(255) null);");
     }
 

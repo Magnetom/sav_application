@@ -35,10 +35,12 @@ public class UserSettings {
 
         TableColumn<VehicleCapacityItem,  String>  capacityTypeColumn    = new TableColumn<>("Тип");
         TableColumn <VehicleCapacityItem, Integer> vehicleCapacityColumn = new TableColumn<>("Объем (куб.м.)");
+        TableColumn <VehicleCapacityItem, Integer> vehicleCostColumn     = new TableColumn<>("Стоимость (руб./куб.м.)");
         TableColumn <VehicleCapacityItem, String>  commentColumn         = new TableColumn<>("Комментарий");
 
         capacityTypeColumn.setCellValueFactory   (new PropertyValueFactory<>("type"));
         vehicleCapacityColumn.setCellValueFactory(new PropertyValueFactory<>("capacity"));
+        vehicleCostColumn.setCellValueFactory    (new PropertyValueFactory<>("cost"));
         commentColumn.setCellValueFactory        (new PropertyValueFactory<>("comment"));
 
         //capacityTypeColumn.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -75,30 +77,17 @@ public class UserSettings {
         });
         ///////////////////////////////////////////////////////////////////////
 
-        vehicleCapacityColumn.setCellFactory(TextFieldTableCell.forTableColumn(new StringConverter<Integer>() {
-            @Override
-            public String toString(Integer object) {
-                if (object == null) return "0";
-                return object.toString();
-            }
-            @Override
-            public Integer fromString(String string) {
-                if (string == null || string.isEmpty()) return 0;
-                Integer val;
-                try {
-                    val = Integer.valueOf(string);
-                } catch (NumberFormatException e){
-                    return 0;
-                }
-                return val;
-            }
-        }));
+        vehicleCapacityColumn.setCellFactory(TextFieldTableCell.forTableColumn(getIntegerStringConverter()));
+        vehicleCostColumn.setCellFactory(TextFieldTableCell.forTableColumn(getIntegerStringConverter()));
+
         commentColumn.setCellFactory(TextFieldTableCell.forTableColumn());
 
         vehicleCapacityColumn.setStyle("-fx-alignment: CENTER;");
+        vehicleCostColumn.setStyle("-fx-alignment: CENTER;");
 
         capacityTypeColumn.setMinWidth(100);
         vehicleCapacityColumn.setMinWidth(110);
+        vehicleCostColumn.setMinWidth(180);
         commentColumn.setMinWidth(180);
 
         // Текст, который будет отображен в случае пустого списка.
@@ -125,6 +114,15 @@ public class UserSettings {
             updateCapacityTab();
         });
 
+        // Вешаем слушателя на изменение содержимого ячейки "СТОИМОСТЬ".
+        vehicleCostColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleCapacityItem, Integer> event) -> {
+            VehicleCapacityItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
+            item.setCost(event.getNewValue());
+            // Запись нового значения в БД или обновление существующей записи в БД.
+            Db.getInstance().updateCapacity(item);
+            updateCapacityTab();
+        });
+
         // Вешаем слушателя на изменение содержимого ячейки "КОММЕНТАРИЙ".
         commentColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleCapacityItem, String> event) -> {
             VehicleCapacityItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
@@ -135,7 +133,7 @@ public class UserSettings {
         });
 
         // Добавляем новые колонки.
-        capacityTable.getColumns().addAll(capacityTypeColumn, vehicleCapacityColumn, commentColumn);
+        capacityTable.getColumns().addAll(capacityTypeColumn, vehicleCapacityColumn, vehicleCostColumn, commentColumn);
 
         // Этот код убирает выделение с выделенных колонок при щелчке на пустое место тела таблицы.
         capacityTable.addEventFilter(MouseEvent.MOUSE_CLICKED, evt -> {
@@ -159,8 +157,10 @@ public class UserSettings {
             // Элемент выпадающего меню для администратора - "УДАЛИТЬ ЭЛЕМЕНТ".
             final MenuItem removeItem = new MenuItem("Удалить элемент!");
             removeItem.setOnAction(event -> {
-                Db.getInstance().removeCapacity(String.valueOf(row.getItem().getId()));
-                capacityTable.getItems().remove(row.getItem());
+                boolean result = Db.getInstance().removeCapacity(String.valueOf(row.getItem().getId()));
+                // Удаляем элемент из таблицы.
+                if (result) capacityTable.getItems().remove(row.getItem());
+                // ToDo: в случае невозможности удаления, вывести уведомительное сообщение с описанием причины.
             });
 
             // Элемент выпадающего меню для администратора - "ДОБАВИТЬ НОВЫЙ ЭЛЕМЕНТ".
@@ -168,7 +168,7 @@ public class UserSettings {
             addItem.setOnAction(event -> {
                 // Запись нового значения в БД или обновление существующей записи в БД.
                 //Db.getInstance().updateCapacity(new VehicleCapacityItem(-1,"SCANIA XT", 0, ""));
-                capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, ""));
+                capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, 0,""));
                 capacityTable.getSelectionModel().selectLast();
             });
 
@@ -191,7 +191,7 @@ public class UserSettings {
                     VehicleCapacityItem itemSelected = (VehicleCapacityItem)capacityTable.getSelectionModel().getSelectedItem();
                     // Только если двойной щелчок был совершен на пустом месте, то добавляем новую строку
                     if (itemSelected == null) {
-                        capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, ""));
+                        capacityTable.getItems().add(new VehicleCapacityItem(-1,"", 0, 0,""));
                         capacityTable.getSelectionModel().selectLast();
                         //System.out.println("Added new empty row...");
                     }
@@ -203,9 +203,31 @@ public class UserSettings {
         updateCapacityTab();
     }
 
+
+    private StringConverter<Integer> getIntegerStringConverter(){
+        return new StringConverter<Integer>() {
+            @Override
+            public String toString(Integer object) {
+                if (object == null) return "0";
+                return object.toString();
+            }
+            @Override
+            public Integer fromString(String string) {
+                if (string == null || string.isEmpty()) return 0;
+                Integer val;
+                try {
+                    val = Integer.valueOf(string);
+                } catch (NumberFormatException e){
+                    return 0;
+                }
+                return val;
+            }
+        };
+    }
+
     private void updateCapacityTab(){
         // Загрузка и отображение всех элементов таблицы БД - CAPACITY.
-        List<VehicleCapacityItem> capList = Db.getInstance().getCapacities();
+        List<VehicleCapacityItem> capList = Db.getInstance().getCapacity(null);
         if (capList != null) {
             ObservableList<VehicleCapacityItem> capacityListObservable = FXCollections.observableArrayList(capList);
             capacityTable.setItems(capacityListObservable);

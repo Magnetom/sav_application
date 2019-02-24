@@ -1,6 +1,6 @@
 package marks;
 
-public class VehicleItem {
+public class VehicleStatisticItem {
 
     private int     recordId;
     private String  vehicle;
@@ -11,7 +11,7 @@ public class VehicleItem {
     private Boolean filtered;
     private int capacity;
 
-    public VehicleItem(int recordId, String vehicle, Integer loops, Boolean blocked, Boolean deleted, Integer popularity, int capacity, Boolean filtered){
+    public VehicleStatisticItem(int recordId, String vehicle, Integer loops, Boolean blocked, Boolean deleted, Integer popularity, int capacity, Boolean filtered){
         this.recordId = recordId;
         this.popularity = popularity;
         this.vehicle    = vehicle;
