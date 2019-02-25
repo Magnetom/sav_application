@@ -7,6 +7,7 @@ import com.sun.istack.internal.Nullable;
 import frames.VehicleCapacityItem;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import marks.VehicleStatisticItem;
 import settings.CachedSettings;
 import utils.Auxiliary;
 
@@ -24,7 +25,7 @@ public class Db {
     public  static String TAG_SQL = "SQL";
     private static String TAG_DB  = "DB";
 
-    private static final int    DB_VERSION_I = 2;
+    private static final int    DB_VERSION_I = 3;
     private static final String DB_VERSION_S = Auxiliary.alignTwo(DB_VERSION_I);
 
     ////////////////////////////////////////////////////////
@@ -671,11 +672,12 @@ public class Db {
             //String timestamp = getHHMMFromStringTimestamp(rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP));
             String timestamp = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP);
             String request   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_REQUEST);
+            String device    = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_MAC);
             boolean deleted  = rs.getBoolean(TABLE_MARKS_COLUMNS.COLUMN_DELETED);
             String comment   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_COMMENT);
             int    recordId  = rs.getInt(TABLE_MARKS_COLUMNS.COLUMN_ID);
 
-            VehicleMark mark = new VehicleMark(timestamp, vehicle, request, deleted, recordId, comment);
+            VehicleMark mark = new VehicleMark(timestamp, vehicle, request, device, deleted, recordId, comment);
             mark.setVehicleDeleted(isVehicleDeleted);
             marksList.add(mark);
         }
@@ -706,14 +708,42 @@ public class Db {
             vehiclesList.add(new VehicleItem(
                     rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_ID),
                     rs.getString(TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE),
-                    0,
                     rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED),
                     rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_DELETED),
                     rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY)+1,
-                    rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY),
-                    false));
+                    rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY)));
         }
         return vehiclesList;
+    }
+
+    // Возвращает информацию об ТС из таблицы VEHICLES.
+    public VehicleItem getVehicle (String vehicle) throws  SQLException{
+
+        if(!isConnected())      return null;
+        if (vehicle == null)    return null;
+        ResultSet rs;
+
+        try {
+            String query = "SELECT * FROM "+
+                    GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES +
+                    " WHERE "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"='"+vehicle+"';";
+            rs = conn.createStatement().executeQuery(query);
+
+            if (rs.next()) {
+                return  new VehicleItem(
+                        rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_ID),
+                        rs.getString(TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE),
+                        rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED),
+                        rs.getBoolean(TABLE_VEHICLES_COLUMNS.COLUMN_DELETED),
+                        rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY)+1,
+                        rs.getInt(TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY));
+            }
+
+        } catch (SQLException e){
+            OnFailReRecover(); // Пытаемся переконнектиться.
+            throw e;
+        }
+        return null;
     }
 
 
@@ -742,7 +772,7 @@ public class Db {
     // Получить статистику по каждому ТС: [госномер]-[количество кругов]-[статус блокировки].
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
-    public List<VehicleItem> getVehiclesStatistic(DbDateRange dateRange, @Nullable List<VehicleMark> markList) throws SQLException{
+    public List<VehicleStatisticItem> getVehiclesStatistic(DbDateRange dateRange, @Nullable List<VehicleMark> markList) throws SQLException{
 
         if(!isConnected()) return null;
 
@@ -766,7 +796,7 @@ public class Db {
         boolean exist;
 
         // Создаем экземпляр класса списка статистики.
-        List<VehicleItem> statisticList = new ArrayList<>();
+        List<VehicleStatisticItem> statisticList = new ArrayList<>();
 
         for (VehicleMark mark: markList) {
             boolean approved = false;
@@ -781,11 +811,11 @@ public class Db {
             if (!approved) continue;
 
             exist = false;
-            for (VehicleItem item: statisticList) {
+            for (VehicleStatisticItem item: statisticList) {
 
                 // если ТС уже есть в итоговом списке, увеличиваем счетчик кругов и переходим к следующей итерации.
                 if (item.getVehicle().equalsIgnoreCase(mark.getVehicle())){
-                    item.setLoopsCnt(item.getLoopsCnt()+1);
+                    item.incLoopsCnt();
                     exist = true;
                     break;
                 }
@@ -799,8 +829,13 @@ public class Db {
                     // Если ТС есть в списке заблокированных - делаем отметку об этом.
                     if (mark.getVehicle().equalsIgnoreCase(blackItem)) isBlocked = true;
                 }
+
+                int capId = -1;
+                VehicleItem vehicleItem = getVehicle(mark.getVehicle());
+                if (vehicleItem != null) capId = vehicleItem.getCapacity();
+
                 // Добавляем новое ТС в новый список.
-                statisticList.add( new VehicleItem(-1,mark.getVehicle(), 1, isBlocked, false,0, -1,false) );
+                statisticList.add( new VehicleStatisticItem(mark.getVehicle(), 1, isBlocked,false, getCapacity(capId)) );
             }
         }
         //////////////////////////////////////////////////////////////////////////////////////
@@ -989,6 +1024,11 @@ public class Db {
         return true;
     }
 
+    public VehicleCapacityItem getCapacity(int recordId){
+        List<VehicleCapacityItem> list = getCapacity(String.valueOf(recordId));
+        if (list != null && !list.isEmpty()) return list.get(0);
+        return null;
+    }
     /* Brief: Получает весь список грузовместимостей или конкретную грузовместимость.
      *
      * Если строковый параметр @recordId не NULL и имеет отличную от нуля длину, то функция вернет
@@ -996,7 +1036,9 @@ public class Db {
      * грузовместимостей.
      */
     public List<VehicleCapacityItem> getCapacity(String recordId){
+
         if (conn == null) return null;
+
         List<VehicleCapacityItem> itemsList = new ArrayList<>();
         ResultSet rs;
 
@@ -1004,6 +1046,7 @@ public class Db {
         // Дополнительное условие для выборки.
         String condition = "";
         if (recordId != null && !recordId.isEmpty()){
+            if (recordId.equalsIgnoreCase("-1")) return null;
             condition = " WHERE " + TABLE_CAPACITY_COLUMNS.COLUMN_ID + "="+recordId;
         }
         /////////////////////////////////////////////////////////////////////////////
@@ -1122,16 +1165,21 @@ public class Db {
 
         // Создать таблицу {vehicles}, если отсутствует.
         Log.println("Проверка существования/создание табицы {vehicles}.");
-        result = conn.createStatement().executeUpdate("create table if not exists "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+"\n" +
+        result = conn.createStatement().executeUpdate("SET FOREIGN_KEY_CHECKS=0;\n" +
+                "create table if not exists "+GENERAL_SCHEMA_NAME+"."+TABLE_VEHICLES+"\n" +
                 "(\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+" varchar(18) not null,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_POPULARITY+" int(11) unsigned default 0 not null,\n" +
                 "  "+TABLE_VEHICLES_COLUMNS.COLUMN_BLOCKED+" bit default b'0' not null,\n" +
-                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+" int(11) default -1 not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_DELETED+" bit default b'0' not null,\n" +
+                "  "+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned null,\n" +
                 "  constraint vehicle_id_unique\n" +
-                "  unique ("+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+")\n" +
-                ");");
+                "  unique ("+TABLE_VEHICLES_COLUMNS.COLUMN_VEHICLE+"),\n" +
+                "  constraint FK_vehicles_capacity\n" +
+                "  foreign key ("+TABLE_VEHICLES_COLUMNS.COLUMN_CAPACITY+") references "+TABLE_CAPACITY+"("+TABLE_CAPACITY_COLUMNS.COLUMN_ID+")\n" +
+                ");\n" +
+                "SET FOREIGN_KEY_CHECKS=1;");
 
         // Создать таблицу {capacity}, если отсутствует.
         Log.println("Проверка существования/создание табицы {capacity}.");
@@ -1141,7 +1189,7 @@ public class Db {
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_TYPE+" varchar(50) not null,\n" +
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_CAPACITY+" int(11) unsigned default '0' not null,\n" +
                 "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COST+" int(11) unsigned default '0' not null,\n" +
-                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+" varchar(255) null);");
+                "  "+TABLE_CAPACITY_COLUMNS.COLUMN_COMMENT+" varchar(255) null)\nauto_increment=1;");
     }
 
     // Создаем необходимые переменные в соответствующих таблицах БД после первого запуска и инициализации БД.

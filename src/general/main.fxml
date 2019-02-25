@@ -13,7 +13,7 @@
         <items>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                <children>
-                  <TableView fx:id="todayVehiclesStatistic" layoutY="39.0" prefHeight="309.0" prefWidth="358.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
+                  <TableView fx:id="todayVehiclesStatistic" layoutY="39.0" prefHeight="309.0" prefWidth="358.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="97.0" text="Госномер" />
                       <TableColumn prefWidth="131.0" text="Количество кругов" />
@@ -23,7 +23,7 @@
                </children></AnchorPane>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="75.0">
                <children>
-                  <TableView fx:id="todayVehiclesMarksLog" layoutX="-21.0" layoutY="21.0" prefHeight="312.0" prefWidth="170.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
+                  <TableView fx:id="todayVehiclesMarksLog" layoutX="-21.0" layoutY="21.0" prefHeight="312.0" prefWidth="170.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="51.0" text="Время" />
                       <TableColumn prefWidth="99.0" text="Госномер" />
@@ -35,7 +35,7 @@
             <AnchorPane minWidth="0.0">
                <children>
                   <Label alignment="CENTER" minHeight="24.0" text="Список транспортных средств" textAlignment="CENTER" textFill="#726f6f" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
-                  <TableView fx:id="allDbVehiclesList" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
+                  <TableView fx:id="allDbVehiclesList" layoutX="54.0" prefHeight="309.0" prefWidth="47.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="24.0">
                     <columns>
                       <TableColumn prefWidth="75.0" text="Госномер" />
                       <TableColumn prefWidth="75.0" text="Статус" />

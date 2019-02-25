@@ -6,6 +6,7 @@ public class VehicleMark {
     private String  vehicle;
     private String  timestamp;
     private String  request;
+    private String  device; // Устройство, с которого была выполнена отметка.
     private boolean deleted;
 
 
@@ -18,6 +19,7 @@ public class VehicleMark {
     public VehicleMark(String timestamp,
                        String vehicle,
                        String request,
+                       String device,
                        boolean deleted,
                        int record,
                        String comment){
@@ -25,6 +27,7 @@ public class VehicleMark {
         this.timestamp  = timestamp;
         this.vehicle    = vehicle;
         this.request    = request;
+        this.device     = device;
         this.deleted    = deleted;
         this.recordId   = record;
         this.comment    = comment;
@@ -53,4 +56,8 @@ public class VehicleMark {
     public void setVehicleDeleted(boolean vehicleDeleted) {
         this.vehicleDeleted = vehicleDeleted;
     }
+
+    public String getDevice() { return device; }
+
+    public void setDevice(String device) { this.device = device; }
 }

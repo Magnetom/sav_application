@@ -1,26 +1,37 @@
 package marks;
 
+import frames.VehicleCapacityItem;
+
 public class VehicleStatisticItem {
 
-    private int     recordId;
     private String  vehicle;
     private Integer loopsCnt;
-    private Integer popularity;
     private Boolean blocked;
-    private Boolean deleted;
     private Boolean filtered;
-    private int capacity;
 
-    public VehicleStatisticItem(int recordId, String vehicle, Integer loops, Boolean blocked, Boolean deleted, Integer popularity, int capacity, Boolean filtered){
-        this.recordId = recordId;
-        this.popularity = popularity;
+    private int capacity;   // Грузовместимость (м.куб.)
+    private int cost;       // Стоимость одного м.куб. груза (руб.).
+
+    private int totalVolume; // Перевезенный объем (м.куб.).
+    private int totalCost;   // Стоимость перевезенного объема (руб.).
+
+    public VehicleStatisticItem(String vehicle,
+                                Integer loops,
+                                Boolean blocked,
+                                Boolean filtered,
+                                VehicleCapacityItem capacityItem){
         this.vehicle    = vehicle;
         this.loopsCnt   = loops;
         this.blocked    = blocked;
-        this.deleted    = deleted;
         this.filtered   = filtered;
-        this.capacity   = capacity;
+
+        if (capacityItem != null){
+            capacity = capacityItem.getCapacity();
+            cost     = capacityItem.getCost();
+        }
+        updateTotalValues();
     }
+
 
     public void setFiltered(Boolean filtered) {this.filtered = filtered; }
 
@@ -32,6 +43,21 @@ public class VehicleStatisticItem {
 
     public void setLoopsCnt(Integer loopsCnt) {
         this.loopsCnt = loopsCnt;
+        updateTotalValues();
+    }
+
+    public void incLoopsCnt() {
+        this.loopsCnt++;
+        updateTotalValues();
+    }
+
+    public void decLoopsCnt(Integer loopsCnt) {
+        this.loopsCnt--;
+        updateTotalValues();
+    }
+    private void updateTotalValues(){
+        totalVolume = capacity * loopsCnt;
+        totalCost   = totalVolume * cost;
     }
 
     public Boolean isBlocked() { return blocked; }
@@ -41,20 +67,14 @@ public class VehicleStatisticItem {
 
     public String getVehicle() {return vehicle;}
 
-    public Integer getLoopsCnt() {
-        return loopsCnt;
+    public Integer getLoopsCnt() { return loopsCnt; }
+
+
+    public int getTotalVolume() {
+        return totalVolume;
     }
 
-    public Integer getPopularity() {return popularity; }
-    public void    setPopularity(Integer popularity) { this.popularity = popularity; }
-
-    public Boolean isDeleted() { return deleted; }
-    public void    setDeleted(Boolean deleted) { this.deleted = deleted; }
-
-    public int  getCapacity() { return capacity; }
-    public void setCapacity(int capacity) { this.capacity = capacity; }
-
-    public int getId() {return recordId; }
-    public void setRecordId(int recordId) { this.recordId = recordId; }
-
+    public int getTotalCost() {
+        return totalCost;
+    }
 }

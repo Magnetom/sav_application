@@ -4,34 +4,22 @@ public class VehicleItem {
 
     private int     recordId;
     private String  vehicle;
-    private Integer loopsCnt;
     private Integer popularity;
     private Boolean blocked;
     private Boolean deleted;
-    private Boolean filtered;
     private int capacity;
 
-    public VehicleItem(int recordId, String vehicle, Integer loops, Boolean blocked, Boolean deleted, Integer popularity, int capacity, Boolean filtered){
+    public VehicleItem(int recordId, String vehicle, Boolean blocked, Boolean deleted, Integer popularity, int capacity){
         this.recordId = recordId;
         this.popularity = popularity;
         this.vehicle    = vehicle;
-        this.loopsCnt   = loops;
         this.blocked    = blocked;
         this.deleted    = deleted;
-        this.filtered   = filtered;
         this.capacity   = capacity;
     }
 
-    public void setFiltered(Boolean filtered) {this.filtered = filtered; }
-
-    public Boolean isFiltered() {return filtered;}
-
     public void setVehicle(String vehicle) {
         this.vehicle = vehicle;
-    }
-
-    public void setLoopsCnt(Integer loopsCnt) {
-        this.loopsCnt = loopsCnt;
     }
 
     public Boolean isBlocked() { return blocked; }
@@ -41,12 +29,6 @@ public class VehicleItem {
 
     public String getVehicle() {return vehicle;}
 
-    public Integer getLoopsCnt() {
-        return loopsCnt;
-    }
-
-    public Integer getPopularity() {return popularity; }
-    public void    setPopularity(Integer popularity) { this.popularity = popularity; }
 
     public Boolean isDeleted() { return deleted; }
     public void    setDeleted(Boolean deleted) { this.deleted = deleted; }
@@ -57,4 +39,6 @@ public class VehicleItem {
     public int getId() {return recordId; }
     public void setRecordId(int recordId) { this.recordId = recordId; }
 
+    public Integer getPopularity() { return popularity; }
+    public void setPopularity(Integer popularity) { this.popularity = popularity; }
 }

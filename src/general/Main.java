@@ -21,6 +21,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import marks.VehicleStatisticItem;
 import settings.LocalSettings;
 import utils.Auxiliary;
 
@@ -29,8 +30,8 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     public static int SW_STAGE     = 1; // Стадия/этап.
-    public static int SW_BUILD     = 8; // Сборка.
-    public static int SW_REVISION  = 1; // Ревизия.
+    public static int SW_BUILD     = 10; // Сборка.
+    public static int SW_REVISION  = 5; // Ревизия.
     // Текущая версия программного обеспечения.
     public static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 
@@ -251,7 +252,7 @@ public class Main extends Application {
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
                                 // Получаем статистику по всем ТС за сегодняшнюю дату.
-                                final ObservableList<VehicleItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
+                                final ObservableList<VehicleStatisticItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
 

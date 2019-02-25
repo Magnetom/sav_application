@@ -40,6 +40,7 @@ import javafx.util.Callback;
 import marks.Statuses;
 import marks.VehicleItem;
 import marks.VehicleMark;
+import marks.VehicleStatisticItem;
 import utils.DateTime;
 
 import java.io.IOException;
@@ -142,21 +143,30 @@ public class MainController {
 
             todayVehiclesStatistic.setEditable(true);
 
-            TableColumn <VehicleItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Integer>  loopsColumn    = new TableColumn<>("Рейсов");
-            TableColumn <VehicleItem, Statuses> statusColumn   = new TableColumn<>("Статус блокировки");
-            TableColumn <VehicleItem, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
+            TableColumn <VehicleStatisticItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
+            TableColumn <VehicleStatisticItem, Integer>  loopsColumn    = new TableColumn<>("Рейсов");
+            TableColumn <Object, Statuses>               statusColumn   = new TableColumn<>("Статус блокировки");
+            TableColumn <VehicleStatisticItem, Boolean>  filterColumn   = new TableColumn<>("Фильтр");
+            TableColumn <VehicleStatisticItem, Integer>  volumeColumn   = new TableColumn<>("Объем перевезен, м.куб.");
+            TableColumn <VehicleStatisticItem, Integer>  costColumn     = new TableColumn<>("Стоимость итого, руб.");
 
             vehicleColumn.setMinWidth(90);
             loopsColumn.setMinWidth(80);
             statusColumn.setMinWidth(125);
+            volumeColumn.setMinWidth(165);
+            costColumn.setMinWidth(150);
 
-            loopsColumn.setStyle("-fx-alignment: CENTER;");
-            statusColumn.setStyle("-fx-alignment: CENTER;");
+            String textAlignStyle = "-fx-alignment: CENTER;";
+            loopsColumn.setStyle(textAlignStyle);
+            statusColumn.setStyle(textAlignStyle);
+            volumeColumn.setStyle(textAlignStyle);
+            costColumn.setStyle(textAlignStyle);
 
             // Defines how to fill data for each cell.
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
             loopsColumn.setCellValueFactory(new PropertyValueFactory<>("loopsCnt"));
+            volumeColumn.setCellValueFactory(new PropertyValueFactory<>("totalVolume"));
+            costColumn.setCellValueFactory(new PropertyValueFactory<>("totalCost"));
 
             // Set Sort type
             loopsColumn.setSortType(TableColumn.SortType.DESCENDING);
@@ -172,7 +182,7 @@ public class MainController {
             /////////////////////////////////////////////////////////////////////////////
             filterColumn.setCellValueFactory(param -> {
 
-                final VehicleItem info = param.getValue();
+                final VehicleStatisticItem info = param.getValue();
                 SimpleBooleanProperty booleanProp = new SimpleBooleanProperty(info.isFiltered());
                 // Note: singleCol.setOnEditCommit(): Not work for CheckBoxTableCell.
                 // When "Filtered" column change.
@@ -184,7 +194,7 @@ public class MainController {
             });
 
             filterColumn.setCellFactory(p -> {
-                CheckBoxTableCell<VehicleItem, Boolean> cell = new CheckBoxTableCell<>();
+                CheckBoxTableCell<VehicleStatisticItem, Boolean> cell = new CheckBoxTableCell<>();
                 cell.setAlignment(Pos.CENTER);
                 return cell;
             });
@@ -193,7 +203,7 @@ public class MainController {
             setupStatisticContextMenu();
 
             // Добавляем новые колонки.
-            todayVehiclesStatistic.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn);
+            todayVehiclesStatistic.getColumns().addAll(vehicleColumn, loopsColumn, statusColumn, filterColumn,volumeColumn, costColumn);
         }
 
         /////////////////////////////////////////////////////////////////////////////////
@@ -206,18 +216,22 @@ public class MainController {
 
             TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Дата/Время");
             TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
+            TableColumn <VehicleMark, String> deviceColumn    = new TableColumn<>("Устройство");
             TableColumn <VehicleMark, String> commentColumn   = new TableColumn<>("Комментарий");
 
             // Defines how to fill data for each cell.
             timestampColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
             vehicleColumn.setCellValueFactory(new PropertyValueFactory<>("vehicle"));
             commentColumn.setCellValueFactory(new PropertyValueFactory<>("comment"));
+            deviceColumn.setCellValueFactory(new PropertyValueFactory<>("device"));
 
             timestampColumn.setMinWidth(150);
             vehicleColumn.setMinWidth(90);
+            commentColumn.setMinWidth(120);
+            deviceColumn.setMinWidth(120);
 
             timestampColumn.setStyle("-fx-alignment: CENTER;");
-            //vehicleColumn.setStyle("-fx-alignment: CENTER;");
+            deviceColumn.setStyle("-fx-alignment: CENTER;");
 
             // Set Sort type for userName column
             timestampColumn.setSortType(TableColumn.SortType.DESCENDING);
@@ -245,7 +259,7 @@ public class MainController {
             setupTodayVehiclesMarksLogContextMenu();
 
             // Добавляем новые колонки.
-            todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn, commentColumn);
+            todayVehiclesMarksLog.getColumns().addAll(timestampColumn, vehicleColumn, deviceColumn, commentColumn);
         }
 
         /////////////////////////////////////////////////////////////////////////////////
@@ -255,10 +269,10 @@ public class MainController {
             allDbVehiclesList.getColumns().clear();
             allDbVehiclesList.setEditable(true);
 
-            TableColumn <VehicleItem, Object>   vehicleColumn    = new TableColumn<>("Госномер");
-            TableColumn <VehicleItem, Statuses> statusColumn     = new TableColumn<>("Статус блокировки");
-            TableColumn <VehicleItem, Object>   popularityColumn = new TableColumn<>("Всего рейсов");
-                                                capacityColumn   = new TableColumn<>("Тип");
+            TableColumn <VehicleItem, Object>  vehicleColumn    = new TableColumn<>("Госномер");
+            TableColumn <Object, Statuses>     statusColumn     = new TableColumn<>("Статус блокировки");
+            TableColumn <VehicleItem, Object>  popularityColumn = new TableColumn<>("Всего рейсов");
+                                               capacityColumn   = new TableColumn<>("Тип");
 
             vehicleColumn.setMinWidth(90);
             statusColumn.setMinWidth(125);
@@ -297,7 +311,8 @@ public class MainController {
             setupVehiclesListContextMenu();
 
             // Добавляем новые колонки.
-            allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn, capacityColumn);
+            //allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, popularityColumn, capacityColumn);
+            allDbVehiclesList.getColumns().addAll(vehicleColumn, statusColumn, capacityColumn);
         }
     }
 
@@ -571,34 +586,46 @@ public class MainController {
     /////////////////////////////////////////////////////////////////////////////
     // Делаем комбо-бокс "Статус" редактируемым и вешаем на него слушателя.
     /////////////////////////////////////////////////////////////////////////////
-    private void setupStatusComboBox(TableColumn <VehicleItem, Statuses> column){
+    /* ToDo: адаптировать для всех типов VehicleItem и VehicleStatisticItem. */
+    private void setupStatusComboBox(TableColumn <Object, Statuses> column){
 
         ObservableList<Statuses> statusList = FXCollections.observableArrayList(Statuses.values());
 
         column.setCellValueFactory(param -> {
-            VehicleItem vehicle = param.getValue();
-            return new SimpleObjectProperty<>( vehicle.isBlocked() ? Statuses.BLOCKED : Statuses.NORMAL );
+
+            boolean blockState = false;
+
+            Object vehicleObject = param.getValue();
+
+            if (vehicleObject instanceof VehicleItem)           blockState = ((VehicleItem)vehicleObject).isBlocked();
+            if (vehicleObject instanceof VehicleStatisticItem)  blockState = ((VehicleStatisticItem)vehicleObject).isBlocked();
+
+            return new SimpleObjectProperty<>( blockState ? Statuses.BLOCKED : Statuses.NORMAL );
         });
 
         column.setCellFactory(ComboBoxTableCell.forTableColumn(statusList));
 
-        column.setOnEditCommit((TableColumn.CellEditEvent<VehicleItem, Statuses> event) -> {
-            TablePosition<VehicleItem, Statuses> pos = event.getTablePosition();
+        column.setOnEditCommit((TableColumn.CellEditEvent<Object, Statuses> event) -> {
+            TablePosition<Object, Statuses> pos = event.getTablePosition();
 
             Statuses newStatus  = event.getNewValue();
-            VehicleItem vehicle = event.getTableView().getItems().get(pos.getRow());
+            Object vehicleObject = event.getTableView().getItems().get(pos.getRow());
+
+            String vehicle = "";
+            if (vehicleObject instanceof VehicleItem)           vehicle = ((VehicleItem)vehicleObject).getVehicle();
+            if (vehicleObject instanceof VehicleStatisticItem)  vehicle = ((VehicleStatisticItem)vehicleObject).getVehicle();
 
             // Создаем новый экземпляр для работы с БД.
             Db db = Db.getInstance();
             // Проверяем наличие подключения еще раз.
             if (db.isConnected()){
                 // Применяем новый статус к ТС.
-                boolean result = db.setVehicleBlocked(vehicle.getVehicle(), newStatus == Statuses.BLOCKED);
+                boolean result = db.setVehicleBlocked(vehicle, newStatus == Statuses.BLOCKED);
 
                 // Если SQL-запрос выполнен с ошибкой - возвращаем предыдущий статус.
                 if (!result) {newStatus = event.getOldValue();}
                 else
-                    Log.println("Госномер "+vehicle.getVehicle()+" был " + ((newStatus==Statuses.BLOCKED)?"заблокирован":"разблокирован")+".");
+                    Log.println("Госномер "+vehicle+" был " + ((newStatus==Statuses.BLOCKED)?"заблокирован":"разблокирован")+".");
 
             } else {
                 // Если мы так и не смогли подключиться к БД, то возвращаем предыдущий статус.
@@ -606,7 +633,8 @@ public class MainController {
             }
 
             // Применяем новый статус к единице данных.
-            vehicle.setBlocked(newStatus == Statuses.BLOCKED);
+            if (vehicleObject instanceof VehicleItem)           ((VehicleItem)vehicleObject).setBlocked(newStatus == Statuses.BLOCKED);
+            if (vehicleObject instanceof VehicleStatisticItem)  ((VehicleStatisticItem)vehicleObject).setBlocked(newStatus == Statuses.BLOCKED);
 
             // Сообщаем верхнему уровню об изменении набора данных или изменении параметров выборки.
             requestAllDatasetReload();
@@ -750,10 +778,10 @@ public class MainController {
     }
 
     // Копирует состояние всех чекбоксов "Фильтр" из старого списка в новый.
-    private void copyFilterFlagList(ObservableList<VehicleItem> oldList, ObservableList<VehicleItem> newList){
-        for (VehicleItem oldInfo:oldList) {
+    private void copyFilterFlagList(ObservableList<VehicleStatisticItem> oldList, ObservableList<VehicleStatisticItem> newList){
+        for (VehicleStatisticItem oldInfo:oldList) {
             if (oldInfo.isFiltered()){
-                for (VehicleItem newInfo:newList) {
+                for (VehicleStatisticItem newInfo:newList) {
                     if (newInfo.getVehicle().equalsIgnoreCase(oldInfo.getVehicle())) newInfo.setFiltered(true);
                 }
             }
@@ -776,7 +804,7 @@ public class MainController {
     }
 
     // Заполняется лог статиcтики.
-    void printStatisticList(ObservableList<VehicleItem> list){
+    void printStatisticList(ObservableList<VehicleStatisticItem> list){
         // Заполняем список данными.
         if (todayVehiclesStatistic != null) {
             // Копируем все отмеченные ранее пользователем чекбоксы "Фильтр" из предыдущего списка.
