@@ -29,11 +29,11 @@ import java.sql.SQLException;
 
 public class Main extends Application {
 
-    public static int SW_STAGE     = 1; // Стадия/этап.
-    public static int SW_BUILD     = 10; // Сборка.
-    public static int SW_REVISION  = 5; // Ревизия.
+    private static int SW_STAGE     = 1; // Стадия/этап.
+    private static int SW_BUILD     = 10; // Сборка.
+    private static int SW_REVISION  = 6; // Ревизия.
     // Текущая версия программного обеспечения.
-    public static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
+    private static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 
     private static MainController mainController;
 

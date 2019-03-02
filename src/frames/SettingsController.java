@@ -83,7 +83,7 @@ public class SettingsController {
         allDbRemoveButton.setOnAction(event -> allDbRemove());
 
         /* Настраиваем кнопку "Запустить скрипт" */
-        runScriptButton.setGraphic(new ImageView(new Image("images/run-script-16.png")));
+        runScriptButton.setGraphic(new ImageView(new Image("images/run-script-file-24.png")));
         runScriptButton.setOnAction(event -> runScriptDialog());
     }
 
