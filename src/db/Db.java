@@ -165,7 +165,7 @@ public class Db {
 
     // Подключиться к предопределенной базе данных.
     public void connect(){
-        Log.println("Попытка установить подключение к базе данных ...");
+        Log.println("Выполняется запрос на подключение к серверу ...");
         if (conn != null) {
             nullConnRecoverFail();
             return;
@@ -176,10 +176,10 @@ public class Db {
                 String serverName = CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT;
                 String userName = decode("595752746157343D");
                 String password = decode("62586C7A635778685A47317062673D3D");
-                //String url = "jdbc:MySQL://" + serverName;
                 String url = "jdbc:MySQL://" + serverName+"?autoReconnect=true&allowMultiQueries=true";
+                Log.println("Устанавливается подключение к серверу баз данных: "+serverName);
                 conn = DriverManager.getConnection(url, userName, password);
-                Log.println("Соединение с базой данных успешно установлено.");
+                Log.println("Соединение с сервером успешно установлено.");
 
                 ///////////////////////////////////////////////////////////////////////////////////////////
                 // Пытаемся проверить метаданные базы данных {aura}. Метеданные не верны и не могут быть созданы - считаем,
@@ -190,7 +190,7 @@ public class Db {
             catch (Exception ex)
             {
                 conn = null;
-                Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером бызы данных: "+CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT, ex.getLocalizedMessage());
+                Log.printerror(TAG_SQL, "CONNECT","Невозможно установить соединение с сервером баз данных: "+CachedSettings.SERVER_ADDRESS+":"+CachedSettings.SERVER_PORT, ex.getLocalizedMessage());
                 ex.printStackTrace();
                 if (onDbConnectionChanged != null) onDbConnectionChanged.onDisconnect(true);
                 return;
@@ -898,6 +898,26 @@ public class Db {
         }
     }
 
+    /* Выбрать текущую базу данных.
+     * P.S. Для старых версий MySQL без вызова этой функции перед sql-запросами может возникнуть исключение:
+     * Exception - no database selection.
+    */
+    public Boolean selectDatabase(String database){
+
+        if(!isConnected()) return false;
+
+        String query = "USE "+database+";";
+        try {
+            conn.createStatement().executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Log.printerror(TAG_SQL, "SELECT_DATABASE",e.getMessage(), query);
+            OnFailReRecover();
+            return false;
+        }
+        return true;
+    }
+
     /* Возвращает TRUE если текущий набор даных на сервере изменился с момента последней выборки. */
     public Boolean isDatasetModified() {
         if(!isConnected()) return false;
@@ -1074,8 +1094,14 @@ public class Db {
 
     /* Прверка целостности БД. Создание БД и ее таблиц при необходимости. */
     private Boolean checkMetadata(){
-        boolean result;
+
+        boolean result = true;
+
         Log.println("Проверка целостности базы данных.");
+
+        // Выбираем текущую базу данных.
+        selectDatabase(GENERAL_SCHEMA_NAME);
+
         if (conn == null) {
             Log.println("Проверка прервана из-за отсутствия подключения к БД.");
             return false;
@@ -1109,7 +1135,7 @@ public class Db {
             }
 
             // Проверка обновлений.
-            result = checkForUpdates();
+            //result = checkForUpdates();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -1121,7 +1147,7 @@ public class Db {
         return result;
     }
 
-    /* Создамне базы данных и всех ее таблиц. */
+    /* Создание базы данных и всех ее таблиц. */
     // Если параметр remove = TRUE - удалить существующую БД перед сзданием новой.
     private void dbInitCreate(boolean remove) throws Exception{
 

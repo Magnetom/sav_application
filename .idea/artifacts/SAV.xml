@@ -6,6 +6,11 @@
         <option name="appClass" value="general.Main" />
         <option name="description" value="The system of accounting of vehicles." />
         <option name="htmlPlaceholderId" value="" />
+        <option name="icons">
+          <JavaFxApplicationIcons>
+            <option name="windowsIcon" value="$PROJECT_DIR$/src/images/favicon.ico" />
+          </JavaFxApplicationIcons>
+        </option>
         <option name="title" value="SAV" />
         <option name="vendor" value="Odyssey" />
         <option name="version" value="1.01" />

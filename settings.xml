@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
+    <sql>
+        <max_sql_script_file_size>100000</max_sql_script_file_size>
+    </sql>
     <network>
         <server_address >127.0.0.1</server_address>
         <server_port >3306</server_port>

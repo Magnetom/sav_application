@@ -39,8 +39,8 @@ public class LocalSettings {
         return nodes.item(0).getTextContent();
     }
 
-    private static long getXMLValueLong(String address, String name, String defaultValue) {
-        String value = (defaultValue!=null)?defaultValue:"0";
+    private static long getXMLValueLong(String address, String name, long defaultValue) {
+        String value = String.valueOf(defaultValue);
         try {
             value = getXMLValue(address, name);
         } catch (XPathExpressionException | ParserConfigurationException e) {
@@ -62,8 +62,8 @@ public class LocalSettings {
 
     public static void reloadSettings(){
 
-        CachedSettings.SERVER_ADDRESS = getXMLValueString("settings/network", "server_address", CachedSettings.DEFAULT_SERVER_ADDRES);
-        CachedSettings.SERVER_PORT    = getXMLValueString("settings/network", "server_port", CachedSettings.DEFAULT_SERVER_PORT);
-
+        CachedSettings.SERVER_ADDRESS       = getXMLValueString("settings/network", "server_address",           CachedSettings.DEFAULT_SERVER_ADDRES);
+        CachedSettings.SERVER_PORT          = getXMLValueString("settings/network", "server_port",              CachedSettings.DEFAULT_SERVER_PORT);
+        CachedSettings.MAX_SQL_SCRIPT_SIZE  = getXMLValueLong  ("settings/sql",     "max_sql_script_file_size", CachedSettings.DEFAULT_MAX_SQL_SCRIPT_SIZE);
     }
 }

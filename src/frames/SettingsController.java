@@ -12,6 +12,7 @@ import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.IntegerStringConverter;
+import settings.CachedSettings;
 import utils.FileIO;
 
 import java.io.File;
@@ -115,8 +116,8 @@ public class SettingsController {
             for (File file:files) {
                 Log.println("Обрабатывается файл: "+ file.toString());
                 // Защита от БОЛЬШИХ файлов: если размер файла превышает установленный предел - переходим к следующему файлу.
-                if (file.length() > 10000) {
-                    Log.printerror(TAG, "runScriptDialog","Ошибка: размер файла в "+file.length()+" байт превышает установленный порога в 10000 байт.", null);
+                if (file.length() > CachedSettings.MAX_SQL_SCRIPT_SIZE) {
+                    Log.printerror(TAG, "runScriptDialog","Ошибка: размер файла в "+file.length()+" байт превышает установленный порога в "+CachedSettings.MAX_SQL_SCRIPT_SIZE+" байт.", null);
                     continue;
                 }
                 String script = FileIO.readFile(file);
