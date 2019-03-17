@@ -35,6 +35,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.*;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import marks.Statuses;
@@ -72,6 +73,7 @@ public class MainController {
     // Отображение текущей настройки времянного интервала.
     public Label markDelay;
     public AnchorPane headerPane;
+    public TextFlow statisticInTotalTextFlow;
 
     // Лог событий
     private int unseenCount; // Количество непросмотренных сообщений.
@@ -180,9 +182,11 @@ public class MainController {
             /////////////////////////////////////////////////////////////////////////////
             // Делаем чекбокс "Фильтр" редактируемым и вешаем на него слушателя.
             /////////////////////////////////////////////////////////////////////////////
+            // Определяем, как получаются значения true/false для чекбоксов.
             filterColumn.setCellValueFactory(param -> {
 
                 final VehicleStatisticItem info = param.getValue();
+
                 SimpleBooleanProperty booleanProp = new SimpleBooleanProperty(info.isFiltered());
                 // Note: singleCol.setOnEditCommit(): Not work for CheckBoxTableCell.
                 // When "Filtered" column change.
@@ -193,6 +197,7 @@ public class MainController {
                 return booleanProp;
             });
 
+            // Установка чекбоксов в качестве элементов ячеек этого столбца.
             filterColumn.setCellFactory(p -> {
                 CheckBoxTableCell<VehicleStatisticItem, Boolean> cell = new CheckBoxTableCell<>();
                 cell.setAlignment(Pos.CENTER);
@@ -603,7 +608,30 @@ public class MainController {
             return new SimpleObjectProperty<>( blockState ? Statuses.BLOCKED : Statuses.NORMAL );
         });
 
-        column.setCellFactory(ComboBoxTableCell.forTableColumn(statusList));
+        //column.setCellFactory(ComboBoxTableCell.forTableColumn(statusList));
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
+        column.setCellFactory(p -> new ComboBoxTableCell<Object, Statuses>(statusList) {
+            @Override
+            public void updateItem(Statuses item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (!empty) {
+                    //VehicleStatisticItem statisticItem = (VehicleStatisticItem) getTableRow().getItem();
+                    
+                    // В ячейке с именем "Итого" скрываем чекбокс.
+                    //if (statisticItem != null && statisticItem.getVehicle().equalsIgnoreCase(MARKER_IN_TOTAL)) {
+                    /*
+                    if (getTableRow().getId().equals(MARKER_IN_TOTAL)) {
+                        //setGraphic(null);
+                        //setText(null);
+                        setEditable(false);
+                    }
+                    */
+                }
+            }
+        });
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
         column.setOnEditCommit((TableColumn.CellEditEvent<Object, Statuses> event) -> {
             TablePosition<Object, Statuses> pos = event.getTablePosition();
@@ -811,6 +839,9 @@ public class MainController {
             copyFilterFlagList( todayVehiclesStatistic.getItems(), list);
             // Заполняем таблицу данными.
             todayVehiclesStatistic.setItems(list);
+
+            // Заполняем поле "Итого".
+            updateInTotal(getInTotal(list));
         }
     }
 
@@ -1111,6 +1142,104 @@ public class MainController {
         DateTimeDialog dialog = new DateTimeDialog();
         dialog.setInterface((timestamp, comment) -> DbProc.addMark(vehicle, timestamp, comment));
         dialog.showAndWait();
+    }
+
+    private void updateInTotal(InTotal inTotal){
+
+        Integer loops   = 0;
+        Integer volume  = 0;
+        Integer cost    = 0;
+
+        if (inTotal != null){
+            loops   = inTotal.getLoops();
+            volume  = inTotal.getVolume();
+            cost    = inTotal.getCost();
+        }
+
+        addInTotalHeader("Итого");
+        addInTotalParamValue("кругов", loops.toString(), "шт.",true);
+        addInTotalParamValue("объем", volume.toString(), "м.куб",true);
+        addInTotalParamValue("стоимость", cost.toString(), "руб.",false);
+
+    }
+
+    private InTotal getInTotal (ObservableList<VehicleStatisticItem> list){
+
+        if (list == null || list.isEmpty()) return null;
+
+        InTotal inTotal = new InTotal();
+
+        int loops   = 0;
+        int volume  = 0;
+        int cost    = 0;
+
+        for (VehicleStatisticItem item: list) {
+            loops   += item.getLoopsCnt();
+            volume  += item.getTotalVolume();
+            cost    += item.getTotalCost();
+        }
+
+        inTotal.setLoops(loops);
+        inTotal.setVolume(volume);
+        inTotal.setCost(cost);
+
+        return inTotal;
+    }
+
+    private void addInTotalHeader(String text){
+
+        statisticInTotalTextFlow.getChildren().clear();
+        // Setting the line spacing between the text objects
+        statisticInTotalTextFlow.setTextAlignment(TextAlignment.JUSTIFY);
+        // Setting the line spacing
+        statisticInTotalTextFlow.setLineSpacing(5.0);
+
+        // Retrieving the observable list of the TextFlow Pane
+        ObservableList list = statisticInTotalTextFlow.getChildren();
+
+        Font  headerFont  = Font.font("Helvetica", FontWeight.NORMAL, 12);
+        Color headerColor = Color.GRAY;
+
+        Text headerText = new Text(text+": ");
+        headerText.setFont(headerFont);
+        headerText.setFill(headerColor);
+        list.addAll(headerText);
+    }
+
+    private void addInTotalParamValue(String param, String value, String units, boolean with_delimiter){
+
+        Font  paramFont  = Font.font("Helvetica", FontWeight.BOLD, 12);
+        Color paramColor = Color.GRAY;
+
+        Font  valueFont  = Font.font("Helvetica", FontWeight.NORMAL, 12);
+        Color valueColor = Color.BROWN;
+
+        Font  unitsFont  = Font.font("Helvetica", FontWeight.NORMAL, 12);
+        Color unitsColor = Color.GRAY;
+
+        Font  delimiterFont  = Font.font("Helvetica", FontWeight.NORMAL, 12);
+        Color delimiterColor = Color.LIGHTGRAY;
+
+        Text paramText = new Text(param+": ");
+        paramText.setFont(paramFont);
+        paramText.setFill(paramColor);
+
+        Text valueText = new Text(value);
+        valueText.setFont(valueFont);
+        valueText.setFill(valueColor);
+
+        Text unitsText = new Text((units!=null)?" "+units:"");
+        unitsText.setFont(unitsFont);
+        unitsText.setFill(unitsColor);
+
+        Text delimiter = new Text(with_delimiter?" | ":"");
+        delimiter.setFont(delimiterFont);
+        delimiter.setFill(delimiterColor);
+
+        // Retrieving the observable list of the TextFlow Pane
+        ObservableList list = statisticInTotalTextFlow.getChildren();
+        // Adding cylinder to the pane
+        list.addAll(paramText, valueText, unitsText, delimiter);
     }
 
 }

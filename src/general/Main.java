@@ -246,12 +246,12 @@ public class Main extends Application {
                                 //final ObservableList<VehicleCapacityItem> capacityList = FXCollections.observableArrayList(db.getInstance().getCapacity(null));
 
 
-                                // Получаем список всех отметок за сегодняшнюю дату.
+                                // Получаем список всех отметок за дату.
                                 final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, showDeletedItems));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 
-                                // Получаем статистику по всем ТС за сегодняшнюю дату.
+                                // Получаем статистику по всем ТС за дату.
                                 final ObservableList<VehicleStatisticItem> statList = FXCollections.observableArrayList(db.getVehiclesStatistic(dateRange, markList));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printStatisticList(statList));
