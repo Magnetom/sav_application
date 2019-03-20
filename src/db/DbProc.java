@@ -2,8 +2,8 @@ package db;
 
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import frames.VehicleCapacityItem;
-import marks.VehicleItem;
+import items.VehicleCapacityItem;
+import items.VehicleItem;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ import static broadcast.Broadcast.DatasetManualChangedNotification;
 public class DbProc {
 
 
-    public static void restoreDateRangeMarks(String vehicle, DbDateRange range){
+    public static void restoreDateRangeMarks(String vehicle, DbTimestampRange range){
         // Получаем экземпляр класса для работы с БД.
         Db.getInstance().toggleMarks(null,vehicle, range, Db.DataToggleTypes.MARK_AS_RESTORED);
         // Уведомляем подписчика о том, что набор данных был изменен.
@@ -33,7 +33,7 @@ public class DbProc {
         DatasetManualChangedNotification();
     }
 
-    public static void clearDateRangeMarks(String vehicle, DbDateRange range){
+    public static void clearDateRangeMarks(String vehicle, DbTimestampRange range){
         // Получаем экземпляр класса для работы с БД.
         Db.getInstance().toggleMarks(null, vehicle, range, Db.DataToggleTypes.MARK_AS_DELETED);
         // Уведомляем подписчика о том, что набор данных был изменен.

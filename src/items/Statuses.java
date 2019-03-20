@@ -1,4 +1,4 @@
-package marks;
+package items;
 
 public enum Statuses {
 

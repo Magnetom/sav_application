@@ -1,6 +1,4 @@
-package marks;
-
-import frames.VehicleCapacityItem;
+package items;
 
 public class VehicleStatisticItem {
 

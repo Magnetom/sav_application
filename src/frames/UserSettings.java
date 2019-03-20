@@ -1,6 +1,7 @@
 package frames;
 
 import db.Db;
+import items.VehicleCapacityItem;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

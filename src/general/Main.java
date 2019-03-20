@@ -4,8 +4,11 @@ import bebug.Log;
 import broadcast.Broadcast;
 import broadcast.OnDbConnectionChanged;
 import db.Db;
-import db.DbDateRange;
+import db.DbTimestampRange;
 import enums.Users;
+import items.VehicleItem;
+import items.VehicleMarkItem;
+import items.VehicleStatisticItem;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -19,9 +22,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import marks.VehicleItem;
-import marks.VehicleMark;
-import marks.VehicleStatisticItem;
 import settings.LocalSettings;
 import utils.Auxiliary;
 
@@ -30,8 +30,8 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     private static int SW_STAGE     = 1;  // Стадия/этап.
-    private static int SW_BUILD     = 10; // Сборка.
-    private static int SW_REVISION  = 10;  // Ревизия.
+    private static int SW_BUILD     = 12; // Сборка.
+    private static int SW_REVISION  = 1;  // Ревизия.
     // Текущая версия программного обеспечения.
     private static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 
@@ -73,12 +73,13 @@ public class Main extends Application {
         //Parent root = FXMLLoader.load(getClass().getResource("main.fxml"));
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
         Parent root = loader.load();
-        mainController = loader.getController();
 
         primaryStage.getIcons().add(new Image("images/favicon.png"));
         primaryStage.setTitle("\"АУРА\" v"+ SW_VERSION_S +" - система Автоматизированного Учета Рейсов Автотранспорта");
         primaryStage.setScene(new Scene(root, -1, -1));
         primaryStage.show();
+
+        mainController = loader.getController();
         // Закрываем все дочерние окна, поражденные основным контроллером.
         primaryStage.setOnCloseRequest(event -> mainController.closeAllChildStages());
         // При нажатии на F5 принудительно обновляем содержимое всех визуальных форм.
@@ -230,7 +231,7 @@ public class Main extends Application {
                                 manualSampleTrigger = false;
 
                                 // Получаем диапазон выборки, выбранный пользователем.
-                                final DbDateRange dateRange = mainController.getUserSelectedDateRange();
+                                final DbTimestampRange dateRange = mainController.getUserSelectedTimestampRange();
                                 // Плучаем текущего пользователя.
                                 final Users currUser = mainController.getCurrentUser();
 
@@ -247,7 +248,7 @@ public class Main extends Application {
 
 
                                 // Получаем список всех отметок за дату.
-                                final ObservableList<VehicleMark> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, showDeletedItems));
+                                final ObservableList<VehicleMarkItem> markList = FXCollections.observableArrayList(db.getMarksRawList(dateRange, showDeletedItems));
                                 // Обновляем GUI элемент из основного потока GUI.
                                 Platform.runLater(() -> mainController.printMarksLog(markList));
 

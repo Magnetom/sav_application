@@ -4,6 +4,8 @@ import javafx.util.StringConverter;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.Locale;
 
@@ -17,11 +19,13 @@ public class DateTime {
     public final static String KKMM_TIME_FORMAT     = "kk:mm";
     public final static String KKMM_SPACE_TIME_FORMAT = "kk mm";
 
+    public final static String HHMMSS_TIME_FORMAT = "HH:mm:ss";
     public final static String KK_TIME_FORMAT     = "kk";
     public final static String MM_TIME_FORMAT     = "mm";
 
     public final static String DDMMYYYY_DATA_FORMAT = "dd-MM-yyyy";
     public final static String YYYYMMDD_DATA_FORMAT = "yyyy-MM-dd";
+    public final static String TIMESTAMP_FORMAT     = "yyyy-MM-dd HH:mm:ss";
     public final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
 
 
@@ -94,6 +98,40 @@ public class DateTime {
         return getLocalDateConverter (YYYYMMDD_DATA_FORMAT);
     }
 
+    // Конвертер даты в строку в формате TIMESTAMP для sql-запросов и пр.
+    public static StringConverter<LocalTime> getDbTimeConverter(){
+        return getLocalTimeConverter (HHMMSS_TIME_FORMAT);
+    }
+
+    // Конвертер даты в строку в формате TIMESTAMP для sql-запросов и пр.
+    public static StringConverter<LocalDateTime> getDbTimestampConverter(){
+        return getLocalTimestampConverter (TIMESTAMP_FORMAT);
+    }
+
+    private static StringConverter<LocalDateTime> getLocalTimestampConverter(String pattern) {
+        if (pattern == null) pattern = TIMESTAMP_FORMAT;
+
+        return new TimestampConverter<LocalDateTime>(pattern) {
+
+            @Override
+            public String toString(LocalDateTime date) {
+                if (date != null) {
+                    return timestampFormatter.format(date);
+                } else {
+                    return "";
+                }
+            }
+            @Override
+            public LocalDateTime fromString(String string) {
+                if (string != null && !string.isEmpty()) {
+                    return LocalDateTime.parse(string, timestampFormatter);
+                } else {
+                    return null;
+                }
+            }
+        };
+    }
+
     private static StringConverter<LocalDate> getLocalDateConverter(String pattern) {
         if (pattern == null) pattern = DDMMYYYY_DATA_FORMAT;
 
@@ -116,5 +154,34 @@ public class DateTime {
                 }
             }
         };
+    }
+
+    private static StringConverter<LocalTime> getLocalTimeConverter(String pattern) {
+        if (pattern == null) pattern = DDMMYYYY_DATA_FORMAT;
+
+        return new TimeConverter<LocalTime>(pattern) {
+
+            @Override
+            public String toString(LocalTime date) {
+                if (date != null) {
+                    return timeFormatter.format(date);
+                } else {
+                    return "";
+                }
+            }
+            @Override
+            public LocalTime fromString(String string) {
+                if (string != null && !string.isEmpty()) {
+                    return LocalTime.parse(string, timeFormatter);
+                } else {
+                    return null;
+                }
+            }
+        };
+    }
+
+    // Дополняет время, если в ней не указаны минуты или секунды.
+    public String alignTime (String time){
+        return "";
     }
 }

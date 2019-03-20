@@ -1,6 +1,6 @@
-package marks;
+package items;
 
-public class VehicleMark {
+public class VehicleMarkItem {
 
     private int     recordId;
     private String  vehicle;
@@ -16,13 +16,13 @@ public class VehicleMark {
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
 
-    public VehicleMark(String timestamp,
-                       String vehicle,
-                       String request,
-                       String device,
-                       boolean deleted,
-                       int record,
-                       String comment){
+    public VehicleMarkItem(String timestamp,
+                           String vehicle,
+                           String request,
+                           String device,
+                           boolean deleted,
+                           int record,
+                           String comment){
 
         this.timestamp  = timestamp;
         this.vehicle    = vehicle;

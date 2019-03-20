@@ -4,10 +4,10 @@ import bebug.Log;
 import broadcast.OnDbConnectionChanged;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import frames.VehicleCapacityItem;
-import marks.VehicleItem;
-import marks.VehicleMark;
-import marks.VehicleStatisticItem;
+import items.VehicleCapacityItem;
+import items.VehicleItem;
+import items.VehicleMarkItem;
+import items.VehicleStatisticItem;
 import settings.CachedSettings;
 import utils.Auxiliary;
 
@@ -244,7 +244,7 @@ public class Db {
         // Удаляются все ТС.
         result = removeAllVehicles();
         // Удаляются все отметки.
-        result &= toggleMarks(null, null, new DbDateRange(true), DataToggleTypes.REAL_DELETE);
+        result &= toggleMarks(null, null, new DbTimestampRange(true), DataToggleTypes.REAL_DELETE);
         // Удаляются все отметки.
         result &= removeAllVariables();
         // Удаляются все грузовместимости.
@@ -477,19 +477,19 @@ public class Db {
     }
 
 
-    private String getDateRangeTimestampCondition(DbDateRange dateRange){
+    private String getTimestampCondition(DbTimestampRange dateRange){
         if (dateRange != null){
-            if (dateRange.getAllDatesFlag()){
+            if (dateRange.getAllTimestampsFlag()){
                 return "";
             } else {
-                if (dateRange.isSingleDate()) {
-                    return "DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")=DATE('" + dateRange.getSingleDate() + "')";
+                if (dateRange.isSingleTimestamp()) {
+                    return "TIMESTAMP(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")=TIMESTAMP('" + dateRange.getSingleTimestamp() + "')";
                 } else {
-                    return "DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")>=DATE('" + dateRange.getStartDate() + "') AND DATE(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")<=DATE('" + dateRange.getStopDate() + "')";
+                    return "TIMESTAMP(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")>=TIMESTAMP('" + dateRange.getStartTimestampFormatted() + "') AND TIMESTAMP(" + TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP + ")<=TIMESTAMP('" + dateRange.getStopTimestampFormatted() + "')";
                 }
             }
         } else {
-            return "DATE("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=DATE(NOW())";
+            return "TIMESTAMP("+TABLE_MARKS_COLUMNS.COLUMN_TIMESTAMP+")=TIMESTAMP(NOW())";
         }
     }
 
@@ -530,7 +530,7 @@ public class Db {
      */
     public Boolean toggleMarks(@Nullable Integer recordId,
                                @NotNull  String vehicle,
-                               @Nullable DbDateRange dateRange,
+                               @Nullable DbTimestampRange dateRange,
                                @NotNull  DataToggleTypes toggleType){
         String query;
         String condition;
@@ -539,7 +539,7 @@ public class Db {
 
         if (recordId != null) condition = TABLE_MARKS_COLUMNS.COLUMN_ID+"='"+recordId.toString()+"'";
         else {
-            condition = getDateRangeTimestampCondition(dateRange);
+            condition = getTimestampCondition(dateRange);
         }
 
         // Дополнительное условие - выборка только для конкретного ТС.
@@ -615,9 +615,9 @@ public class Db {
      *
      * Если параметр @dateRange равен NULL, то выборка за текущую дату.
      * Если параметр @showDeleted равен TRUE, то в списке будут присутствовать удаленные ранее отметки т.е.
-     * те, которые отмечены на удаление (столбец deleted в таблице marks).
+     * те, которые отмечены на удаление (столбец deleted в таблице items).
      */
-    public List<VehicleMark> getMarksRawList(DbDateRange dateRange, boolean showDeleted) throws SQLException {
+    public List<VehicleMarkItem> getMarksRawList(DbTimestampRange dateRange, boolean showDeleted) throws SQLException {
 
         if(!isConnected()) return null;
 
@@ -630,7 +630,7 @@ public class Db {
         } catch (SQLException e){ OnFailReRecover(); throw e; }
 
 
-        String condition = getDateRangeTimestampCondition(dateRange);
+        String condition = getTimestampCondition(dateRange);
 
         // Если не требуется показывать удаленные ранее отметки и отметки удаленных ТС, создаем дополнительный фильтр.
         if (!showDeleted) {
@@ -645,7 +645,7 @@ public class Db {
         } catch (SQLException e){ OnFailReRecover(); throw e; }
 
 
-        List<VehicleMark> marksList = new ArrayList<>();
+        List<VehicleMarkItem> marksList = new ArrayList<>();
         // Перебираем все полученные отметки.
         while (rs.next()) {
 
@@ -677,7 +677,7 @@ public class Db {
             String comment   = rs.getString(TABLE_MARKS_COLUMNS.COLUMN_COMMENT);
             int    recordId  = rs.getInt(TABLE_MARKS_COLUMNS.COLUMN_ID);
 
-            VehicleMark mark = new VehicleMark(timestamp, vehicle, request, device, deleted, recordId, comment);
+            VehicleMarkItem mark = new VehicleMarkItem(timestamp, vehicle, request, device, deleted, recordId, comment);
             mark.setVehicleDeleted(isVehicleDeleted);
             marksList.add(mark);
         }
@@ -772,7 +772,7 @@ public class Db {
     // Получить статистику по каждому ТС: [госномер]-[количество кругов]-[статус блокировки].
     // Может работать с уже имеющимся списком отметок за текущий день. Если список не передан (NULL), тогда
     // список будет сформирован с помощью соответствующего запроса в БД.
-    public List<VehicleStatisticItem> getVehiclesStatistic(DbDateRange dateRange, @Nullable List<VehicleMark> markList) throws SQLException{
+    public List<VehicleStatisticItem> getVehiclesStatistic(DbTimestampRange dateRange, @Nullable List<VehicleMarkItem> markList) throws SQLException{
 
         if(!isConnected()) return null;
 
@@ -798,7 +798,7 @@ public class Db {
         // Создаем экземпляр класса списка статистики.
         List<VehicleStatisticItem> statisticList = new ArrayList<>();
 
-        for (VehicleMark mark: markList) {
+        for (VehicleMarkItem mark: markList) {
             boolean approved = false;
 
             // Если текущая отметка помечена как удаленная, то не учитываем ее в статистике.
@@ -1163,8 +1163,8 @@ public class Db {
         Log.println("Проверка существования/создание базы данных {aura}.");
         result = conn.createStatement().executeUpdate("CREATE DATABASE IF NOT EXISTS "+GENERAL_SCHEMA_NAME+";");
 
-        // Создать таблицу {marks}, если отсутствует.
-        Log.println("Проверка существования/создание табицы {marks}.");
+        // Создать таблицу {items}, если отсутствует.
+        Log.println("Проверка существования/создание табицы {items}.");
         result = conn.createStatement().executeUpdate("create table if not exists "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+"\n" +
                 "(\n" +
                 "  "+TABLE_MARKS_COLUMNS.COLUMN_ID+" int(11) unsigned auto_increment primary key,\n" +
@@ -1259,7 +1259,7 @@ public class Db {
 
         Log.println("Старт обновления БД до версии "+cur_db_version+" ...");
 
-        // Создается новая колонка {comment} в таблице {marks}.
+        // Создается новая колонка {comment} в таблице {items}.
         try {
             conn.createStatement().executeUpdate("ALTER TABLE "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" ADD "+TABLE_MARKS_COLUMNS.COLUMN_COMMENT+" varchar(255) AFTER "+TABLE_MARKS_COLUMNS.COLUMN_REQUEST+";");
             result = true;

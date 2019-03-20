@@ -4,12 +4,13 @@ import bebug.Log;
 import bebug.LogInterface;
 import broadcast.Broadcast;
 import db.Db;
-import db.DbDateRange;
 import db.DbProc;
+import db.DbTimestampRange;
 import dialogs.datetime.DateTimeDialog;
+import dialogs.time.TimeDialog;
 import enums.Users;
 import frames.SettingsController;
-import frames.VehicleCapacityItem;
+import items.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -22,6 +23,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -37,11 +39,8 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Callback;
-import marks.Statuses;
-import marks.VehicleItem;
-import marks.VehicleMark;
-import marks.VehicleStatisticItem;
 import utils.DateTime;
 
 import java.io.IOException;
@@ -64,8 +63,11 @@ public class MainController {
     public Label clockHour;
     public Label clockColon;
     public Label clockMinutes;
+
     public Label clockDateStart;
     public Label clockDateStop;
+    public Label clockTimeStart;
+    public Label clockTimeStop;
     public ImageView resetDateButton;
     public DatePicker datepicker_hidden_start;
     public DatePicker datepicker_hidden_stop;
@@ -82,7 +84,7 @@ public class MainController {
     // Содержит список ТС, которые необходимо отображать в логе отметок (список справа).
     private ArrayList<String> filteredVehicles;
 
-    private FilteredList<VehicleMark> filteredData;
+    private FilteredList<VehicleMarkItem> filteredData;
 
     private boolean controlButton;
 
@@ -95,6 +97,9 @@ public class MainController {
     private static SettingsController settingsController;
 
     TableColumn <VehicleItem, VehicleCapacityItem>  capacityColumn;
+
+    // Текст, который будет отображен в случае пустого списка.
+    private static final String emptyText = "Нет данных для отображения.";
 
     /* Конструктор класса */
     public  MainController(){
@@ -118,7 +123,18 @@ public class MainController {
 
         setupDatePickers();
 
+        setupTimePickers();
+
         initListeners();
+    }
+
+    private Stage getStage(){
+        if (this.debugLogArea != null) {
+            if (this.debugLogArea.getScene() != null){
+                return (Stage)this.debugLogArea.getScene().getWindow();
+            }
+        }
+        return null;
     }
 
     public Users getCurrentUser(){
@@ -131,11 +147,18 @@ public class MainController {
         if (setupStage!=null)setupStage.close();
     }
 
+    private Node getEmptyNode(){
+        Label emptyLabel = new Label(emptyText);
+        emptyLabel.setStyle("-fx-text-alignment: center");
+        return emptyLabel;
+    }
+
     /* Полная очистка GUI интерфейса и реинициализация. */
     private void initAllGUIs(){
 
         // Очищается лог событий.
         if (debugLogArea != null) debugLogArea.setText("");
+
 
         /////////////////////////////////////////////////////////////////////////////////
         // Настраиваем список подробной СТАТИСТИКИ ПО КАЖДОМУ ГОСНОМЕРУ.
@@ -144,6 +167,7 @@ public class MainController {
             todayVehiclesStatistic.getColumns().clear();
 
             todayVehiclesStatistic.setEditable(true);
+            todayVehiclesStatistic.setPlaceholder(getEmptyNode());
 
             TableColumn <VehicleStatisticItem, String>   vehicleColumn  = new TableColumn<>("Госномер");
             TableColumn <VehicleStatisticItem, Integer>  loopsColumn    = new TableColumn<>("Рейсов");
@@ -219,10 +243,12 @@ public class MainController {
             todayVehiclesMarksLog.getColumns().clear();
             todayVehiclesMarksLog.setEditable(true);
 
-            TableColumn <VehicleMark, String> timestampColumn = new TableColumn<>("Дата/Время");
-            TableColumn <VehicleMark, String> vehicleColumn   = new TableColumn<>("Госномер");
-            TableColumn <VehicleMark, String> deviceColumn    = new TableColumn<>("Устройство");
-            TableColumn <VehicleMark, String> commentColumn   = new TableColumn<>("Комментарий");
+            todayVehiclesMarksLog.setPlaceholder(getEmptyNode());
+
+            TableColumn <VehicleMarkItem, String> timestampColumn = new TableColumn<>("Дата/Время");
+            TableColumn <VehicleMarkItem, String> vehicleColumn   = new TableColumn<>("Госномер");
+            TableColumn <VehicleMarkItem, String> deviceColumn    = new TableColumn<>("Устройство");
+            TableColumn <VehicleMarkItem, String> commentColumn   = new TableColumn<>("Комментарий");
 
             // Defines how to fill data for each cell.
             timestampColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
@@ -252,8 +278,8 @@ public class MainController {
             // Вешаем слушателя на изменение содержимого ячейки "ТИП".
             commentColumn.setEditable(true);
             commentColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-            commentColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleMark, String> event) -> {
-                VehicleMark item = event.getTableView().getItems().get(event.getTablePosition().getRow());
+            commentColumn.setOnEditCommit((TableColumn.CellEditEvent<VehicleMarkItem, String> event) -> {
+                VehicleMarkItem item = event.getTableView().getItems().get(event.getTablePosition().getRow());
                 item.setComment(event.getNewValue());
                 //Запись нового значения в БД.
                 Db.getInstance().updateMarkComment(String.valueOf(item.getRecordId()), event.getNewValue());
@@ -273,6 +299,7 @@ public class MainController {
         if (allDbVehiclesList != null){
             allDbVehiclesList.getColumns().clear();
             allDbVehiclesList.setEditable(true);
+            allDbVehiclesList.setPlaceholder(getEmptyNode());
 
             TableColumn <VehicleItem, Object>  vehicleColumn    = new TableColumn<>("Госномер");
             TableColumn <Object, Statuses>     statusColumn     = new TableColumn<>("Статус блокировки");
@@ -322,17 +349,17 @@ public class MainController {
     }
 
     // Настройка ячеек для таблицы "СПИСОК ТЕКУЩИХ ОТМЕТОК".
-    private TableCell<VehicleMark, String> setupTableCellFactoryMARKS(){
-        return new TableCell<VehicleMark, String>() {
+    private TableCell<VehicleMarkItem, String> setupTableCellFactoryMARKS(){
+        return new TableCell<VehicleMarkItem, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (item == null || empty) setText("");
                 else {
                     setText(item);
-                    TableRow<VehicleMark> currentRow = getTableRow();
+                    TableRow<VehicleMarkItem> currentRow = getTableRow();
                     if (currentRow != null) {
-                        VehicleMark markItem = currentRow.getItem();
+                        VehicleMarkItem markItem = currentRow.getItem();
                         if (markItem != null) {
                             if (markItem.isVehicleDeleted()) setTextFill(Color.ORANGE);
                             else
@@ -420,10 +447,10 @@ public class MainController {
     // Настраивает контекстное меню для таблицы "СПИСОК ТЕКУЩИХ ОТМЕТОК".
     private void setupTodayVehiclesMarksLogContextMenu(){
 
-        todayVehiclesMarksLog.setRowFactory((Callback<TableView<VehicleMark>, TableRow<VehicleMark>>) tableView -> {
+        todayVehiclesMarksLog.setRowFactory((Callback<TableView<VehicleMarkItem>, TableRow<VehicleMarkItem>>) tableView -> {
             final ContextMenu rowMenu = new ContextMenu();
             final SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
-            final TableRow<VehicleMark> row = new TableRow<>();
+            final TableRow<VehicleMarkItem> row = new TableRow<>();
 
             // Элемент выпадающего меню для администратора - "УДАЛИТЬ ОТМЕТКУ".
             final MenuItem removeItem = new MenuItem("Удалить отметку");
@@ -488,7 +515,7 @@ public class MainController {
                     // Элемент выпадающего меню для администратора - "УДАЛИТЬ РЕЙСЫ - ВЫБРАННЫЙ ДИАПАЗОН ДАТ".
                     final MenuItem removeItemDateRange = new MenuItem("Удалить рейсы (диапазон дат)");
                     removeItemDateRange.setOnAction(event -> {
-                        DbProc.clearDateRangeMarks(row.getItem().getVehicle(), getUserSelectedDateRange());
+                        DbProc.clearDateRangeMarks(row.getItem().getVehicle(), getUserSelectedTimestampRange());
                     });
 
                     // Элемент выпадающего меню для администратора - "УДАЛИТЬ РЕЙСЫ - ТЕКУЩАЯ ДАТА".
@@ -500,7 +527,7 @@ public class MainController {
                     // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ РЕЙСЫ - ВЫБРАННЫЙ ДИАПАЗОН ДАТ".
                     final MenuItem restoreDateRangeMarks = new MenuItem("Восстановить рейсы (диапазон дат)");
                     restoreDateRangeMarks.setOnAction(event -> {
-                        DbProc.restoreDateRangeMarks(row.getItem().getVehicle(), getUserSelectedDateRange());
+                        DbProc.restoreDateRangeMarks(row.getItem().getVehicle(), getUserSelectedTimestampRange());
                     });
 
                     // Элемент выпадающего меню для администратора - "ВОССТАНОВИТЬ РЕЙСЫ - ТЕКУЩАЯ ДАТА".
@@ -818,11 +845,11 @@ public class MainController {
 
 
     // Заполняется лог отметок.
-    void printMarksLog(ObservableList<VehicleMark> list){
+    void printMarksLog(ObservableList<VehicleMarkItem> list){
         // Заполняем список данными.
         if (todayVehiclesMarksLog != null) {
             filteredData = new FilteredList(list);
-            SortedList<VehicleMark> sortableData = new SortedList<>(filteredData);
+            SortedList<VehicleMarkItem> sortableData = new SortedList<>(filteredData);
             todayVehiclesMarksLog.setItems(sortableData);
             sortableData.comparatorProperty().bind(todayVehiclesMarksLog.comparatorProperty());
 
@@ -884,6 +911,34 @@ public class MainController {
     private Image entered = new Image("images/reset-date-brown.png");
     private Image exited  = new Image("images/reset-date-grey.png");
 
+    private void setupTimePickers() {
+
+        clockTimeStart.setText("00:01");
+        clockTimeStop.setText("23:59");
+
+        setupTimePicker(clockTimeStart);
+        setupTimePicker(clockTimeStop);
+    }
+
+    private void setupTimePicker(Node node){
+
+        node.setOnMouseClicked(event -> {
+
+            // Берем любой графический элемент и через него выходим на окно.
+            Window window = node.getParent().getScene().getWindow();
+
+            // Запускаем диалоговое окно выбора времени.
+            TimeDialog timeDialog = new TimeDialog(window, node, ((Label)node).getText());
+
+            // Назначаем слушателя на изменение значения времени.
+            timeDialog.setInterface(timestamp -> {
+                ((Label)node).setText(timestamp);
+                requestAllDatasetReload();
+            });
+            timeDialog.showAndWait();
+        });
+    }
+
     private void setupDatePickers(){
 
         // Сбросить все даты.
@@ -929,6 +984,9 @@ public class MainController {
         String reset_value_1 = getTimeDDMMYYYY();
         clockDateStart.setText(reset_value_1);
         clockDateStop.setText(reset_value_1);
+
+        clockTimeStart.setText("00:01");
+        clockTimeStop.setText("23:59");
 
         // Устанавливаем текущую дату для скрытых датапикеров (DatePicker).
         LocalDate reset_value_2 = DateTime.getDbDateConverter().fromString(getTimeYYYYMMDD());
@@ -976,10 +1034,16 @@ public class MainController {
         return dayCellFactory;
     }
 
-    DbDateRange getUserSelectedDateRange(){
-        DbDateRange dbDateRange = new DbDateRange();
-        dbDateRange.setStartDate(datepicker_hidden_start.getValue());
-        dbDateRange.setStopDate(datepicker_hidden_stop.getValue());
+    DbTimestampRange getUserSelectedTimestampRange(){
+
+        DbTimestampRange dbDateRange = new DbTimestampRange();
+
+        String start = datepicker_hidden_start.getValue().toString() + " " + clockTimeStart.getText()+":00";
+        String stop  = datepicker_hidden_stop.getValue().toString() + " " + clockTimeStop.getText()+":00";
+
+        dbDateRange.setStartTimestamp(start);
+        dbDateRange.setStopTimestamp(stop);
+
         return dbDateRange;
     }
 
@@ -1044,7 +1108,7 @@ public class MainController {
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();// Get the Stage.
         stage.getIcons().add(new Image(this.getClass().getResource("/images/key-32.png").toString()));// Add a custom icon.
         dialog.getDialogPane().setContent(grid);
-
+        dialog.initOwner(debugLogArea.getScene().getWindow());
         dialog.showAndWait();
     }
 
@@ -1101,11 +1165,13 @@ public class MainController {
 
         Parent root;
         try {
+
             root = loader.load();
             setupStage = new Stage();
             setupStage.getIcons().add(new Image("/images/user-settings-32.png"));
             setupStage.setTitle("Пользовательские настройки");
             setupStage.setScene(new Scene(root, -1, -1));
+            setupStage.initOwner(getStage());
 
             // Событие при открытии окна.
             setupStage.setOnShown(event2 -> {

@@ -1,4 +1,4 @@
-package frames;
+package items;
 
 public class VehicleCapacityItem {
     private int     id;
@@ -17,7 +17,7 @@ public class VehicleCapacityItem {
         this.id = id;
     }
 
-    VehicleCapacityItem(int id, String type, int capacity, int cost, String comment) {
+    public VehicleCapacityItem(int id, String type, int capacity, int cost, String comment) {
         this.id         = id;
         this.type       = type;
         this.capacity   = capacity;
