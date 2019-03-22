@@ -6,7 +6,7 @@ import broadcast.Broadcast;
 import db.Db;
 import db.DbProc;
 import db.DbTimestampRange;
-import dialogs.datetime.addNewMarkDialog;
+import dialogs.newmark.addNewMarkDialog;
 import dialogs.time.TimeDialog;
 import enums.Users;
 import frames.SettingsController;
@@ -1072,7 +1072,7 @@ public class MainController {
         GridPane grid = new GridPane();
         grid.add(passwordPasswordField, 0, 0);
         grid.setStyle("-fx-alignment: center");
-        passwordPasswordField.setFocusTraversable(false);
+        passwordPasswordField.setFocusTraversable(true);
         passwordPasswordField.requestFocus();
 
         // Настраиваем диалоговое окно.
@@ -1108,7 +1108,16 @@ public class MainController {
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();// Get the Stage.
         stage.getIcons().add(new Image(this.getClass().getResource("/images/key-32.png").toString()));// Add a custom icon.
         dialog.getDialogPane().setContent(grid);
-        dialog.initOwner(debugLogArea.getScene().getWindow());
+        dialog.initOwner(getStage());
+
+        ///////////////////////////////////////////////////////
+        // Попытка установить фокус на текстовое поле ввода пароля.
+        // Комментарий:
+        // Platform.runLater will run at the end, after the main method start(),
+        // which ensures the call of requestFocus will be after scene graph construction.
+        Platform.runLater(passwordPasswordField::requestFocus);
+        ///////////////////////////////////////////////////////
+
         dialog.showAndWait();
     }
 
