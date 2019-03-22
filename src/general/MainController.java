@@ -992,6 +992,8 @@ public class MainController {
         LocalDate reset_value_2 = DateTime.getDbDateConverter().fromString(getTimeYYYYMMDD());
         datepicker_hidden_start.setValue(reset_value_2);
         datepicker_hidden_stop.setValue(reset_value_2);
+
+        requestAllDatasetReload();
     }
 
     // Factory to create Cell of DatePicker
