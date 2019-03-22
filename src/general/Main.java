@@ -30,7 +30,7 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     private static int SW_STAGE     = 1;  // Стадия/этап.
-    private static int SW_BUILD     = 12; // Сборка.
+    private static int SW_BUILD     = 13; // Сборка.
     private static int SW_REVISION  = 1;  // Ревизия.
     // Текущая версия программного обеспечения.
     private static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
@@ -65,6 +65,28 @@ public class Main extends Application {
 
         // Инициализируем базу данных и удаленное подключение к ней.
         dbInit();
+
+        /////////////////////////////////////////////////////////
+
+        /*
+        String comment = "Быть или не быть, вот в чем {1:0 вопрос jjj {123j:5}!";
+
+        if (comment != null && !comment.isEmpty()) {
+            Pattern p = Pattern.compile("\\{[0-9]*:[0-9]*}");
+            Matcher matcher = p.matcher(comment);
+            String res = "";
+
+            String [] list = new String[matcher.groupCount()];
+
+            while (matcher.find()) {
+                res = matcher.group();
+            }
+        }
+        */
+
+        //List<Integer[]> list = parseIntPair (comment);
+
+        ///////////////////////////////////////////////////////////
     }
 
     // Инициализация графического интерфейса пользователя.

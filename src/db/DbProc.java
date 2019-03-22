@@ -4,10 +4,13 @@ import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import items.VehicleCapacityItem;
 import items.VehicleItem;
+import utils.time.DateTime;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static broadcast.Broadcast.DatasetManualChangedNotification;
+import static servcmd.Parser.parseIntPair;
 
 public class DbProc {
 
@@ -57,8 +60,44 @@ public class DbProc {
     public static void addMark(@NotNull String vehicle, @Nullable String timestamp, @Nullable String comment){
         if (vehicle == null) return;
 
-        // Получаем экземпляр класса для работы с БД.
-        Db.getInstance().addMark(vehicle,timestamp,comment);
+
+        // Реализуется скрытая возможность: если комментарий указан в формате {Число1:Число2}, то добавляется
+        // количество идентичных отметок равным Число1 с шагом в Число2 минут. Служебная команда из комментария удаляется.
+        // При этом комментарий может быть заполнен любой другой информацией - вся она будет сохранна вместе с отметкой.
+
+        int repeat = 1; // Количество повторений отметок.
+        int step_minutes = 1; // Шаг повторений в минутах.
+
+        if (comment != null && !comment.isEmpty()) {
+
+            StringBuffer bufferComment = new StringBuffer(comment);
+
+            List<Integer[]> list = parseIntPair (bufferComment, true);
+
+            if (list!= null && !list.isEmpty()){
+                repeat       = list.get(0)[0];
+                step_minutes = list.get(0)[1];
+
+                // Получаем новый комментарий, очищенный от служебных сомволов.
+                comment = bufferComment.toString();
+            }
+        }
+
+        // Получаем стартовую дату и время.
+        LocalDateTime currTimestamp = DateTime.getDbTimestampConverter().fromString(timestamp);
+
+        Db db = Db.getInstance();
+        if (db == null) return;
+
+        // Выполняем требуемое количество отметок с нужным шагом.
+        for (int ii = 0; ii < repeat; ii++){
+
+            // Получаем экземпляр класса для работы с БД и добавляем отметку.
+            db.addMark(vehicle,currTimestamp,comment);
+            // Инкрементируем шаг в минутах.
+            currTimestamp = currTimestamp.plusMinutes(step_minutes);
+        }
+
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
@@ -95,4 +134,11 @@ public class DbProc {
         // Уведомляем подписчика о том, что набор данных был изменен.
         DatasetManualChangedNotification();
     }
+
+    // Возвращает количество повторов и шаг повторов для автоматической вставки множества отметок.
+    /*
+    private DecPair getNewMarkRepetitions(){
+
+    }
+    */
 }

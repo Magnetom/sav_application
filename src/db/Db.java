@@ -10,11 +10,13 @@ import items.VehicleMarkItem;
 import items.VehicleStatisticItem;
 import settings.CachedSettings;
 import utils.Auxiliary;
+import utils.time.DateTime;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -352,6 +354,14 @@ public class Db {
         return true;
     }
 
+    Boolean addMark(@NotNull  String vehicle,
+                    @Nullable LocalDateTime timestamp,
+                    @Nullable String comment){
+
+        String stringTimestamp = DateTime.getDbTimestampConverter().toString(timestamp);
+        return addMark(vehicle, stringTimestamp, comment);
+    }
+
     /* Brief: Ручная установка отметки ТС.
      *
      * @vehicle   - госномер ТС для которого будет выполнена отметка.
@@ -370,6 +380,8 @@ public class Db {
         String writer_id = "application";
         String query;
 
+        // System.out.println("Adding new mark: "+vehicle+" - "+timestamp+" - "+request_id+"\r\n");
+
         if (timestamp == null || timestamp.isEmpty())
             query = "INSERT INTO "+GENERAL_SCHEMA_NAME+"."+TABLE_MARKS+" ("+TABLE_MARKS_COLUMNS.COLUMN_VEHICLE+","+TABLE_MARKS_COLUMNS.COLUMN_MAC+","+TABLE_MARKS_COLUMNS.COLUMN_REQUEST+","+TABLE_MARKS_COLUMNS.COLUMN_COMMENT+") " +
                     "VALUES ('"+vehicle+"','"+writer_id+"','"+request_id+"','"+comment+"');";
@@ -381,7 +393,7 @@ public class Db {
             conn.createStatement().executeUpdate(query);
 
             // Если запрос выполнен удачно, то обновляем рейтинг популярности.
-            incrementPopularity(vehicle);
+            //incrementPopularity(vehicle);
 
         } catch (SQLException e) {
             e.printStackTrace();

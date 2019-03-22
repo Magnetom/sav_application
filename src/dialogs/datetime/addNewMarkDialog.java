@@ -8,12 +8,12 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-public class DateTimeDialog {
+public class addNewMarkDialog {
     private static DateTimeController controller;
     private Stage stage;
     private TimestampPickedInterface timestampPickedInterface;
 
-    public DateTimeDialog() {initialise();}
+    public addNewMarkDialog() {initialise();}
 
     public void showAndWait(){
         if (stage!=null) stage.showAndWait();

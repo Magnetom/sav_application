@@ -6,13 +6,13 @@ import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import javafx.util.converter.DateTimeStringConverter;
 import utils.Auxiliary;
-import utils.DateTime;
+import utils.time.DateTime;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 
-import static utils.DateTime.getVisualDateConverter;
+import static utils.time.DateTime.getVisualDateConverter;
 
 public class DateTimeController {
 

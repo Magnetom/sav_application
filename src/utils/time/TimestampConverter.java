@@ -1,4 +1,4 @@
-package utils;
+package utils.time;
 
 import javafx.util.StringConverter;
 

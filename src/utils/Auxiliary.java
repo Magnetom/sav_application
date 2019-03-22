@@ -1,6 +1,7 @@
 package utils;
 
 import javafx.util.StringConverter;
+import utils.time.DateTime;
 
 import java.text.NumberFormat;
 import java.text.ParsePosition;
@@ -23,10 +24,11 @@ public class Auxiliary {
     public static int getRandom32(){
 
         final int min = 0x00000000;
-        final int max = 0xFFFFFFFF;
+        final int max = 0x7FFFFFFF;
 
         Random r = new Random();
-        return (r.nextInt(max - min + 1) + min);
+        //return (r.nextInt(max - min + 1) + min);
+        return (r.nextInt(max-1));
     }
 
     public static String getRandom32String(){
@@ -34,8 +36,7 @@ public class Auxiliary {
     }
 
     public static String genStrongUidString(){
-        String random = DateTime.getCurrentTimeStamp();
-        if (random==null) random = getRandom32String();
+        String random = DateTime.getCurrentTimeStamp() + getRandom32String();
         return Hash.MD5(random);
     }
 

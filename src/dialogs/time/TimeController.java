@@ -10,7 +10,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import javafx.util.converter.DateTimeStringConverter;
-import utils.DateTime;
+import utils.time.DateTime;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

@@ -6,7 +6,7 @@ import broadcast.Broadcast;
 import db.Db;
 import db.DbProc;
 import db.DbTimestampRange;
-import dialogs.datetime.DateTimeDialog;
+import dialogs.datetime.addNewMarkDialog;
 import dialogs.time.TimeDialog;
 import enums.Users;
 import frames.SettingsController;
@@ -41,15 +41,15 @@ import javafx.scene.text.*;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Callback;
-import utils.DateTime;
+import utils.time.DateTime;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import static utils.DateTime.*;
 import static utils.Hash.MD5;
+import static utils.time.DateTime.*;
 
 public class MainController {
 
@@ -1205,7 +1205,7 @@ public class MainController {
     private void addMarkManually(String vehicle){
 
         // Настраиваем диалоговое окно для получения времянной метки новой отметки.
-        DateTimeDialog dialog = new DateTimeDialog();
+        addNewMarkDialog dialog = new addNewMarkDialog();
         dialog.setInterface((timestamp, comment) -> DbProc.addMark(vehicle, timestamp, comment));
         dialog.showAndWait();
     }

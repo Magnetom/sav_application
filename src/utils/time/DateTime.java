@@ -1,4 +1,4 @@
-package utils;
+package utils.time;
 
 import javafx.util.StringConverter;
 
@@ -11,22 +11,22 @@ import java.util.Locale;
 
 public class DateTime {
 
-    public static long ONE_MINUTE = 60L*1000L;
-    public static long ONE_HOUR   = 60L*ONE_MINUTE;
-    public static long ONE_DAY    = 24L*ONE_HOUR;
+    private static long ONE_MINUTE = 60L*1000L;
+    private static long ONE_HOUR   = 60L*ONE_MINUTE;
+    private static long ONE_DAY    = 24L*ONE_HOUR;
 
-    public final static String MMSS_TIME_FORMAT     = "mm:ss";
-    public final static String KKMM_TIME_FORMAT     = "kk:mm";
-    public final static String KKMM_SPACE_TIME_FORMAT = "kk mm";
+    private final static String MMSS_TIME_FORMAT     = "mm:ss";
+    private final static String KKMM_TIME_FORMAT     = "kk:mm";
+    private final static String KKMM_SPACE_TIME_FORMAT = "kk mm";
 
-    public final static String HHMMSS_TIME_FORMAT = "HH:mm:ss";
-    public final static String KK_TIME_FORMAT     = "kk";
-    public final static String MM_TIME_FORMAT     = "mm";
+    private final static String HHMMSS_TIME_FORMAT = "HH:mm:ss";
+    private final static String KK_TIME_FORMAT     = "kk";
+    private final static String MM_TIME_FORMAT     = "mm";
 
-    public final static String DDMMYYYY_DATA_FORMAT = "dd-MM-yyyy";
-    public final static String YYYYMMDD_DATA_FORMAT = "yyyy-MM-dd";
-    public final static String TIMESTAMP_FORMAT     = "yyyy-MM-dd HH:mm:ss";
-    public final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
+    private final static String DDMMYYYY_DATA_FORMAT = "dd-MM-yyyy";
+    private final static String YYYYMMDD_DATA_FORMAT = "yyyy-MM-dd";
+    private final static String TIMESTAMP_FORMAT     = "yyyy-MM-dd HH:mm:ss";
+    private final static long   MILLIS_TO_DATA  = 25L*24L*60L*60L*1000L;
 
 
     /**
