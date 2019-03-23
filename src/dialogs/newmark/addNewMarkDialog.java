@@ -52,7 +52,12 @@ public class addNewMarkDialog {
                 stage.hide();
                 if (timestampPickedInterface!=null && controller!=null){
                     if (controller.getTimestamp()!= null && !controller.getTimestamp().isEmpty())
-                    timestampPickedInterface.picked(controller.getTimestamp(), controller.getComment());
+
+                    timestampPickedInterface.picked(
+                            controller.getTimestamp(),
+                            controller.getComment(),
+                            controller.getRepeatCount(),
+                            controller.getStepsCount());
                 }
             });
 

@@ -1217,7 +1217,7 @@ public class MainController {
 
         // Настраиваем диалоговое окно для получения времянной метки новой отметки.
         addNewMarkDialog dialog = new addNewMarkDialog();
-        dialog.setInterface((timestamp, comment) -> DbProc.addMark(vehicle, timestamp, comment));
+        dialog.setInterface((timestamp, comment, repeat, step) -> DbProc.addMark(vehicle, timestamp, comment, repeat, step));
         dialog.showAndWait();
     }
 

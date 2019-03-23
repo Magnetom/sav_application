@@ -57,18 +57,23 @@ public class DbProc {
         DatasetManualChangedNotification();
     }
 
-    public static void addMark(@NotNull String vehicle, @Nullable String timestamp, @Nullable String comment){
-        if (vehicle == null) return;
+    public static void addMark(
+                                @NotNull  String vehicle,
+                                @Nullable String timestamp,
+                                @Nullable String comment,
+                                          int    repeat,
+                                          int    step_minutes){
 
+        if (vehicle == null) return;
 
         // Реализуется скрытая возможность: если комментарий указан в формате {Число1:Число2}, то добавляется
         // количество идентичных отметок равным Число1 с шагом в Число2 минут. Служебная команда из комментария удаляется.
         // При этом комментарий может быть заполнен любой другой информацией - вся она будет сохранна вместе с отметкой.
 
-        int repeat = 1; // Количество повторений отметок.
-        int step_minutes = 1; // Шаг повторений в минутах.
+        //int repeat = 1; // Количество повторений отметок.
+        //int step_minutes = 1; // Шаг повторений в минутах.
 
-        if (comment != null && !comment.isEmpty()) {
+        if (comment != null && !comment.isEmpty() && repeat == 1) {
 
             StringBuffer bufferComment = new StringBuffer(comment);
 

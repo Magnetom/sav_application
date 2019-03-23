@@ -30,8 +30,8 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     private static int SW_STAGE     = 1;  // Стадия/этап.
-    private static int SW_BUILD     = 13; // Сборка.
-    private static int SW_REVISION  = 3;  // Ревизия.
+    private static int SW_BUILD     = 14; // Сборка.
+    private static int SW_REVISION  = 1;  // Ревизия.
     // Текущая версия программного обеспечения.
     private static final String SW_VERSION_S = SW_STAGE + "." + Auxiliary.alignTwo(SW_BUILD) + "." + Auxiliary.alignTwo(SW_REVISION);
 

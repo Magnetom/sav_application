@@ -3,18 +3,25 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.shape.Rectangle?>
-<?import javafx.scene.text.Text?>
-<AnchorPane prefHeight="295.0" prefWidth="242.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="dialogs.newmark.DateTimeController">
+<?import javafx.scene.text.*?>
+<AnchorPane prefHeight="373.0" prefWidth="242.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="dialogs.newmark.DateTimeController">
+   <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="76.0" layoutX="7.0" layoutY="208.0" stroke="#8bcd72" strokeType="INSIDE" width="228.0" />
    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="57.0" layoutX="7.0" layoutY="8.0" stroke="#afbecc" strokeType="INSIDE" width="228.0" />
    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="128.0" layoutX="7.0" layoutY="72.0" stroke="#afbecc" strokeType="INSIDE" width="228.0" />
-    <Button fx:id="saveButton" layoutX="128.0" layoutY="262.0" mnemonicParsing="false" text="Создать отметку" />
+    <Button fx:id="saveButton" layoutX="128.0" layoutY="342.0" mnemonicParsing="false" text="Создать отметку" />
     <Slider id="hoursSlider" fx:id="hoursSlider" accessibleHelp="Часы" blockIncrement="1.0" layoutX="21.0" layoutY="127.0" majorTickUnit="23.0" max="23.0" minorTickCount="23" prefHeight="38.0" prefWidth="199.0" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
     <Slider id="minutesSlider" fx:id="minutesSlider" layoutX="21.0" layoutY="162.0" majorTickUnit="10.0" max="59.0" minorTickCount="10" prefHeight="14.0" prefWidth="199.0" showTickLabels="true" showTickMarks="true" />
    <DatePicker id="dateField" fx:id="dateField" layoutX="19.0" layoutY="29.0" prefHeight="25.0" prefWidth="199.0" />
    <TextField id="timeField" fx:id="timeField" layoutX="21.0" layoutY="94.0" prefHeight="25.0" prefWidth="199.0" />
    <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="21.0" layoutY="89.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Время" />
    <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="20.0" layoutY="24.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Дата" />
-   <Button id="cancelButton" fx:id="cancelButton" layoutX="65.0" layoutY="262.0" mnemonicParsing="false" text="Отмена" />
-   <TextField fx:id="commentField" layoutX="7.0" layoutY="228.0" prefHeight="25.0" prefWidth="228.0" style="-fx-background-color: #FFF9C4; -fx-border-color: #90A4AE; -fx-border-radius: 3;" />
-   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="7.0" layoutY="223.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Комментарий" />
+   <Button id="cancelButton" fx:id="cancelButton" layoutX="65.0" layoutY="342.0" mnemonicParsing="false" text="Отмена" />
+   <TextField fx:id="commentField" layoutX="7.0" layoutY="305.0" prefHeight="25.0" prefWidth="228.0" style="-fx-background-color: #FFF9C4; -fx-border-color: #90A4AE; -fx-border-radius: 3;" />
+   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="7.0" layoutY="300.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Комментарий" />
+   <TextField fx:id="repeatField" layoutX="74.0" layoutY="217.0" prefHeight="25.0" prefWidth="78.0" />
+   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="16.0" layoutY="234.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Поворить" />
+   <TextField fx:id="stepField" layoutX="74.0" layoutY="250.0" prefHeight="25.0" prefWidth="78.0" />
+   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="16.0" layoutY="266.0" strokeType="OUTSIDE" strokeWidth="0.0" text="С шагом" />
+   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="159.0" layoutY="233.0" strokeType="OUTSIDE" strokeWidth="0.0" text="раз" />
+   <Text fill="#4f5768" fontSmoothingType="LCD" layoutX="159.0" layoutY="267.0" strokeType="OUTSIDE" strokeWidth="0.0" text="минут" />
 </AnchorPane>
